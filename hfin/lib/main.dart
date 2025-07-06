@@ -68,6 +68,10 @@ class _MainScreenState extends State<MainScreen> {
   
   // Cancelled transactions list
   List<Map<String, dynamic>> _cancelledTransactions = [];
+  
+  // Calendar navigation
+  DateTime _currentMonth = DateTime.now();
+  DateTime? _selectedDay;
 
   @override
   void initState() {
@@ -440,22 +444,8 @@ class _MainScreenState extends State<MainScreen> {
   Widget _getBody() {
     switch (_selectedIndex) {
       case 0:
-        // History
-        if (_history.isEmpty) {
-          return const Center(child: Text('No transactions in history.', style: TextStyle(fontSize: 18)));
-        }
-        return ListView(
-          children: _history.map((tx) => Card(
-            margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-            color: Colors.grey[850],
-            child: ListTile(
-              title: Text('₹${tx['amount'].toStringAsFixed(2)}'),
-              subtitle: Text('${tx['merchant'] ?? 'Unknown'}\n${(tx['timestamp'] as DateTime).toLocal()}'),
-              trailing: Text(tx['tag'] ?? '', style: const TextStyle(fontWeight: FontWeight.bold)),
-              isThreeLine: true,
-            ),
-          )).toList(),
-        );
+        // History with calendar view
+        return _buildCalendarView();
       case 1:
         // Home: show transaction cards
         if (_transactions.isEmpty) {
@@ -605,5 +595,286 @@ class _MainScreenState extends State<MainScreen> {
         elevation: 4.0,
       ),
     );
+  }
+
+  // Calendar helper methods
+  List<Map<String, dynamic>> _getTransactionsForMonth(DateTime month) {
+    return _history.where((tx) {
+      final txDate = tx['timestamp'] as DateTime;
+      return txDate.year == month.year && txDate.month == month.month;
+    }).toList();
+  }
+
+  List<Map<String, dynamic>> _getTransactionsForDay(DateTime day) {
+    return _history.where((tx) {
+      final txDate = tx['timestamp'] as DateTime;
+      return txDate.year == day.year && 
+             txDate.month == day.month && 
+             txDate.day == day.day;
+    }).toList();
+  }
+
+  double _getTotalForMonth(DateTime month) {
+    final monthTransactions = _getTransactionsForMonth(month);
+    return monthTransactions.fold(0.0, (sum, tx) => sum + (tx['amount'] as double));
+  }
+
+  double _getTotalForDay(DateTime day) {
+    final dayTransactions = _getTransactionsForDay(day);
+    return dayTransactions.fold(0.0, (sum, tx) => sum + (tx['amount'] as double));
+  }
+
+  Map<int, double> _getDailyTotalsForMonth(DateTime month) {
+    final monthTransactions = _getTransactionsForMonth(month);
+    final dailyTotals = <int, double>{};
+    
+    for (final tx in monthTransactions) {
+      final day = (tx['timestamp'] as DateTime).day;
+      dailyTotals[day] = (dailyTotals[day] ?? 0.0) + (tx['amount'] as double);
+    }
+    
+    return dailyTotals;
+  }
+
+  Widget _buildCalendarView() {
+    final monthTransactions = _getTransactionsForMonth(_currentMonth);
+    final dailyTotals = _getDailyTotalsForMonth(_currentMonth);
+    final monthTotal = _getTotalForMonth(_currentMonth);
+    
+    return Column(
+      children: [
+        // Month navigation header
+        Container(
+          padding: const EdgeInsets.all(16),
+          color: Colors.grey[900],
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              IconButton(
+                icon: const Icon(Icons.chevron_left, color: Colors.white),
+                onPressed: () {
+                  setState(() {
+                    _currentMonth = DateTime(_currentMonth.year, _currentMonth.month - 1);
+                    _selectedDay = null;
+                  });
+                },
+              ),
+              Column(
+                children: [
+                  Text(
+                    '${_getMonthName(_currentMonth.month)} ${_currentMonth.year}',
+                    style: const TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                  Text(
+                    'Total: ₹${monthTotal.toStringAsFixed(2)}',
+                    style: const TextStyle(
+                      fontSize: 16,
+                      color: Colors.deepPurpleAccent,
+                    ),
+                  ),
+                ],
+              ),
+              IconButton(
+                icon: const Icon(Icons.chevron_right, color: Colors.white),
+                onPressed: () {
+                  setState(() {
+                    _currentMonth = DateTime(_currentMonth.year, _currentMonth.month + 1);
+                    _selectedDay = null;
+                  });
+                },
+              ),
+            ],
+          ),
+        ),
+        
+        // Calendar grid
+        Expanded(
+          child: _selectedDay == null ? _buildMonthCalendar(dailyTotals) : _buildDayDetails(_selectedDay!),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildMonthCalendar(Map<int, double> dailyTotals) {
+    final daysInMonth = DateTime(_currentMonth.year, _currentMonth.month + 1, 0).day;
+    final firstDayOfMonth = DateTime(_currentMonth.year, _currentMonth.month, 1);
+    final firstWeekday = firstDayOfMonth.weekday;
+    
+    return Column(
+      children: [
+        // Weekday headers
+        Container(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          child: Row(
+            children: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+                .map((day) => Expanded(
+                      child: Text(
+                        day,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: Colors.grey,
+                        ),
+                      ),
+                    ))
+                .toList(),
+          ),
+        ),
+        
+        // Calendar days
+        Expanded(
+          child: GridView.builder(
+            padding: const EdgeInsets.all(8),
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 7,
+              childAspectRatio: 1,
+              crossAxisSpacing: 4,
+              mainAxisSpacing: 4,
+            ),
+            itemCount: 42, // 6 weeks * 7 days
+            itemBuilder: (context, index) {
+              final dayOffset = index - (firstWeekday - 1);
+              final day = dayOffset + 1;
+              
+              if (day < 1 || day > daysInMonth) {
+                return Container(); // Empty space
+              }
+              
+              final dayTotal = dailyTotals[day] ?? 0.0;
+              final isToday = day == DateTime.now().day && 
+                             _currentMonth.month == DateTime.now().month && 
+                             _currentMonth.year == DateTime.now().year;
+              
+              return InkWell(
+                onTap: () {
+                  setState(() {
+                    _selectedDay = DateTime(_currentMonth.year, _currentMonth.month, day);
+                  });
+                },
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: dayTotal > 0 ? Colors.deepPurple.withOpacity(0.3) : Colors.grey[800],
+                    borderRadius: BorderRadius.circular(8),
+                    border: isToday ? Border.all(color: Colors.deepPurpleAccent, width: 2) : null,
+                  ),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        day.toString(),
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: isToday ? Colors.deepPurpleAccent : Colors.white,
+                        ),
+                      ),
+                      if (dayTotal > 0) ...[
+                        const SizedBox(height: 2),
+                        Text(
+                          '₹${dayTotal.toStringAsFixed(0)}',
+                          style: const TextStyle(
+                            fontSize: 10,
+                            color: Colors.deepPurpleAccent,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildDayDetails(DateTime day) {
+    final dayTransactions = _getTransactionsForDay(day);
+    final dayTotal = _getTotalForDay(day);
+    
+    return Column(
+      children: [
+        // Day header
+        Container(
+          padding: const EdgeInsets.all(16),
+          color: Colors.grey[900],
+          child: Row(
+            children: [
+              IconButton(
+                icon: const Icon(Icons.arrow_back, color: Colors.white),
+                onPressed: () {
+                  setState(() {
+                    _selectedDay = null;
+                  });
+                },
+              ),
+              Expanded(
+                child: Column(
+                  children: [
+                    Text(
+                      '${_getMonthName(day.month)} ${day.day}, ${day.year}',
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                    Text(
+                      'Total: ₹${dayTotal.toStringAsFixed(2)}',
+                      style: const TextStyle(
+                        fontSize: 16,
+                        color: Colors.deepPurpleAccent,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+        
+        // Day transactions
+        Expanded(
+          child: dayTransactions.isEmpty
+              ? const Center(
+                  child: Text(
+                    'No transactions for this day',
+                    style: TextStyle(fontSize: 16, color: Colors.grey),
+                  ),
+                )
+              : ListView.builder(
+                  itemCount: dayTransactions.length,
+                  itemBuilder: (context, index) {
+                    final tx = dayTransactions[index];
+                    return Card(
+                      margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 16),
+                      color: Colors.grey[850],
+                      child: ListTile(
+                        title: Text('₹${tx['amount'].toStringAsFixed(2)}'),
+                        subtitle: Text(tx['merchant'] ?? 'Unknown'),
+                        trailing: Text(
+                          tx['tag'] ?? '',
+                          style: const TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+        ),
+      ],
+    );
+  }
+
+  String _getMonthName(int month) {
+    const months = [
+      'January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December'
+    ];
+    return months[month - 1];
   }
 }
