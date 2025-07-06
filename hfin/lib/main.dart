@@ -1,7 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Hive.initFlutter();
+  await Hive.openBox('transactions');
+  await Hive.openBox('history');
   runApp(const MyApp());
 }
 
@@ -44,33 +49,128 @@ class MainScreen extends StatefulWidget {
 class _MainScreenState extends State<MainScreen> {
   int _selectedIndex = 1; // 0: history, 1: home, 2: plus
 
-  // Mock transaction data
-  List<Map<String, dynamic>> _transactions = [
-    {
-      'id': 1,
-      'amount': 120.50,
-      'merchant': 'Starbucks',
-      'timestamp': DateTime.now().subtract(const Duration(minutes: 10)),
-      'tag': null,
-    },
-    {
-      'id': 2,
-      'amount': 45.00,
-      'merchant': 'Amazon',
-      'timestamp': DateTime.now().subtract(const Duration(hours: 1)),
-      'tag': null,
-    },
-  ];
-
+  List<Map<String, dynamic>> _transactions = [];
   List<Map<String, dynamic>> _history = [];
-  int _nextId = 3;
+  int _nextId = 1;
   static const MethodChannel _channel = MethodChannel('sms_channel');
   static const EventChannel _smsEventChannel = EventChannel('sms_events');
+
+  late Box _transactionsBox;
+  late Box _historyBox;
 
   @override
   void initState() {
     super.initState();
+    _initStorage();
+    _loadData();
     _initSmsListener();
+  }
+
+  void _initStorage() {
+    _transactionsBox = Hive.box('transactions');
+    _historyBox = Hive.box('history');
+  }
+
+  void _loadData() {
+    // Load transactions
+    final savedTransactions = _transactionsBox.get('transactions', defaultValue: <Map<String, dynamic>>[]);
+    final savedHistory = _historyBox.get('history', defaultValue: <Map<String, dynamic>>[]);
+    
+    setState(() {
+      _transactions = _convertFromStorage(savedTransactions);
+      _history = _convertFromStorage(savedHistory);
+      
+      // Add mock data if no data exists
+      if (_transactions.isEmpty && _history.isEmpty) {
+        _transactions = [
+          {
+            'id': 1,
+            'amount': 120.50,
+            'merchant': 'Starbucks',
+            'timestamp': DateTime.now().subtract(const Duration(minutes: 10)),
+            'tag': null,
+          },
+          {
+            'id': 2,
+            'amount': 45.00,
+            'merchant': 'Amazon',
+            'timestamp': DateTime.now().subtract(const Duration(hours: 1)),
+            'tag': null,
+          },
+        ];
+        _nextId = 3;
+      } else {
+        // Find the highest ID to set _nextId
+        int maxId = 0;
+        for (final tx in [..._transactions, ..._history]) {
+          if (tx['id'] is int && tx['id'] > maxId) {
+            maxId = tx['id'];
+          }
+        }
+        _nextId = maxId + 1;
+      }
+    });
+    
+    // Load pending transactions from native storage
+    _loadPendingTransactions();
+  }
+
+  void _loadPendingTransactions() async {
+    try {
+      final pendingTransactions = await _channel.invokeMethod('getPendingTransactions');
+      if (pendingTransactions is List && pendingTransactions.isNotEmpty) {
+        setState(() {
+          for (final tx in pendingTransactions) {
+            if (tx is Map) {
+              final transaction = _parseTransactionFromSms(
+                tx['body'] as String?,
+                tx['sender'] as String?,
+                tx['timestamp'] != null ? DateTime.fromMillisecondsSinceEpoch(tx['timestamp'] as int) : null,
+              );
+              if (transaction != null) {
+                _transactions.insert(0, transaction);
+                _nextId++;
+              }
+            }
+          }
+        });
+        _saveTransactions();
+        // Clear pending transactions after loading
+        await _channel.invokeMethod('clearPendingTransactions');
+      }
+    } catch (e) {
+      print('Error loading pending transactions: $e');
+    }
+  }
+
+  List<Map<String, dynamic>> _convertFromStorage(List<dynamic> data) {
+    return data.map((item) {
+      final map = Map<String, dynamic>.from(item);
+      // Convert timestamp back to DateTime
+      if (map['timestamp'] is int) {
+        map['timestamp'] = DateTime.fromMillisecondsSinceEpoch(map['timestamp'] as int);
+      }
+      return map;
+    }).toList();
+  }
+
+  List<Map<String, dynamic>> _convertToStorage(List<Map<String, dynamic>> data) {
+    return data.map((item) {
+      final map = Map<String, dynamic>.from(item);
+      // Convert DateTime to milliseconds for storage
+      if (map['timestamp'] is DateTime) {
+        map['timestamp'] = (map['timestamp'] as DateTime).millisecondsSinceEpoch;
+      }
+      return map;
+    }).toList();
+  }
+
+  void _saveTransactions() {
+    _transactionsBox.put('transactions', _convertToStorage(_transactions));
+  }
+
+  void _saveHistory() {
+    _historyBox.put('history', _convertToStorage(_history));
   }
 
   void _initSmsListener() async {
@@ -91,6 +191,7 @@ class _MainScreenState extends State<MainScreen> {
                 _transactions.insert(0, tx);
                 _nextId++;
               });
+              _saveTransactions();
             }
           }
         });
@@ -134,6 +235,8 @@ class _MainScreenState extends State<MainScreen> {
       _history.insert(0, Map<String, dynamic>.from(tx));
       _transactions.removeWhere((t) => t['id'] == id);
     });
+    _saveTransactions();
+    _saveHistory();
   }
 
   void _cancelTransaction(int id) async {
@@ -158,6 +261,7 @@ class _MainScreenState extends State<MainScreen> {
       setState(() {
         _transactions.removeWhere((t) => t['id'] == id);
       });
+      _saveTransactions();
     }
   }
 
