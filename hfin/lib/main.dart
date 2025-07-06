@@ -53,7 +53,6 @@ class _MainScreenState extends State<MainScreen> {
   List<Map<String, dynamic>> _history = [];
   int _nextId = 1;
   static const MethodChannel _channel = MethodChannel('sms_channel');
-  static const EventChannel _smsEventChannel = EventChannel('sms_events');
 
   late Box _transactionsBox;
   late Box _historyBox;
@@ -178,26 +177,55 @@ class _MainScreenState extends State<MainScreen> {
       // Request SMS permissions
       final bool? hasPermission = await _channel.invokeMethod('requestSmsPermissions');
       if (hasPermission == true) {
-        // Listen for incoming SMS
-        _smsEventChannel.receiveBroadcastStream().listen((dynamic event) {
-          if (event is Map) {
-            final tx = _parseTransactionFromSms(
-              event['body'] as String?,
-              event['sender'] as String?,
-              event['timestamp'] != null ? DateTime.fromMillisecondsSinceEpoch(event['timestamp'] as int) : null,
-            );
-            if (tx != null) {
-              setState(() {
-                _transactions.insert(0, tx);
-                _nextId++;
-              });
-              _saveTransactions();
+        // Scan SMS for today's transactions when app opens
+        await _scanTodaySms();
+      }
+    } catch (e) {
+      print('Error initializing SMS scanner: $e');
+    }
+  }
+
+  Future<void> _scanTodaySms() async {
+    try {
+      // Get today's SMS and parse for transactions
+      final todaySms = await _channel.invokeMethod('getTodaySms');
+      if (todaySms is List && todaySms.isNotEmpty) {
+        setState(() {
+          for (final sms in todaySms) {
+            if (sms is Map) {
+              final transaction = _parseTransactionFromSms(
+                sms['body'] as String?,
+                sms['sender'] as String?,
+                sms['timestamp'] != null ? DateTime.fromMillisecondsSinceEpoch(sms['timestamp'] as int) : null,
+              );
+              if (transaction != null) {
+                // Create a unique identifier for this transaction based on SMS content and time
+                final transactionKey = '${transaction['amount']}_${transaction['merchant']}_${(transaction['timestamp'] as DateTime).millisecondsSinceEpoch ~/ 60000}'; // Round to minute
+                
+                // Check if this transaction is already in history
+                final isInHistory = _history.any((h) {
+                  final historyKey = '${h['amount']}_${h['merchant']}_${(h['timestamp'] as DateTime).millisecondsSinceEpoch ~/ 60000}';
+                  return historyKey == transactionKey;
+                });
+                
+                // Check if this transaction is already in current transactions
+                final isInCurrent = _transactions.any((t) {
+                  final currentKey = '${t['amount']}_${t['merchant']}_${(t['timestamp'] as DateTime).millisecondsSinceEpoch ~/ 60000}';
+                  return currentKey == transactionKey;
+                });
+                
+                if (!isInHistory && !isInCurrent) {
+                  _transactions.insert(0, transaction);
+                  _nextId++;
+                }
+              }
             }
           }
         });
+        _saveTransactions();
       }
     } catch (e) {
-      print('Error initializing SMS listener: $e');
+      print('Error scanning today\'s SMS: $e');
     }
   }
 

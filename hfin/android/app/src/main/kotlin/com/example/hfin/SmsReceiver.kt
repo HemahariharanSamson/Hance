@@ -6,28 +6,53 @@ import android.content.Intent
 import android.os.Build
 import android.provider.Telephony
 import android.telephony.SmsMessage
+import android.util.Log
 
 class SmsReceiver : BroadcastReceiver() {
+    companion object {
+        private const val TAG = "SmsReceiver"
+    }
+
     override fun onReceive(context: Context?, intent: Intent?) {
-        if (intent?.action == Telephony.Sms.Intents.SMS_RECEIVED_ACTION) {
-            val messages = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
-                Telephony.Sms.Intents.getMessagesFromIntent(intent)
-            } else {
-                @Suppress("DEPRECATION")
-                Telephony.Sms.Intents.getMessagesFromIntent(intent)
+        Log.d(TAG, "SmsReceiver onReceive called with action: ${intent?.action}")
+        
+        when (intent?.action) {
+            Telephony.Sms.Intents.SMS_RECEIVED_ACTION -> {
+                Log.d(TAG, "SMS received, processing...")
+                handleSmsReceived(context, intent)
             }
+            Intent.ACTION_BOOT_COMPLETED -> {
+                Log.d(TAG, "Boot completed, receiver is active")
+            }
+            Intent.ACTION_MY_PACKAGE_REPLACED -> {
+                Log.d(TAG, "Package replaced, receiver is active")
+            }
+        }
+    }
+
+    private fun handleSmsReceived(context: Context?, intent: Intent?) {
+        val messages = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
+            Telephony.Sms.Intents.getMessagesFromIntent(intent)
+        } else {
+            @Suppress("DEPRECATION")
+            Telephony.Sms.Intents.getMessagesFromIntent(intent)
+        }
+        
+        messages?.forEach { sms ->
+            val sender = sms.originatingAddress ?: "Unknown"
+            val body = sms.messageBody ?: ""
+            val timestamp = sms.timestampMillis
             
-            messages?.forEach { sms ->
-                val sender = sms.originatingAddress ?: "Unknown"
-                val body = sms.messageBody ?: ""
-                val timestamp = sms.timestampMillis
-                
-                // Try to parse as transaction
-                val transaction = parseTransactionFromSms(body, sender, timestamp)
-                if (transaction != null) {
-                    // Save to storage even when app is closed
-                    saveTransactionToStorage(context, transaction)
-                }
+            Log.d(TAG, "SMS from: $sender, body: $body")
+            
+            // Try to parse as transaction
+            val transaction = parseTransactionFromSms(body, sender, timestamp)
+            if (transaction != null) {
+                Log.d(TAG, "Transaction parsed successfully: $transaction")
+                // Save to storage even when app is closed
+                saveTransactionToStorage(context, transaction)
+            } else {
+                Log.d(TAG, "SMS did not match transaction pattern")
             }
         }
     }
@@ -59,14 +84,19 @@ class SmsReceiver : BroadcastReceiver() {
 
     private fun saveTransactionToStorage(context: Context?, transaction: Map<String, Any>) {
         context?.let {
-            val prefs = it.getSharedPreferences("sms_transactions", Context.MODE_PRIVATE)
-            val transactions = prefs.getStringSet("pending_transactions", mutableSetOf())?.toMutableSet() ?: mutableSetOf()
-            
-            // Convert transaction to JSON-like string for storage
-            val transactionString = "${transaction["id"]}|${transaction["amount"]}|${transaction["merchant"]}|${transaction["timestamp"]}|${transaction["tag"]}"
-            transactions.add(transactionString)
-            
-            prefs.edit().putStringSet("pending_transactions", transactions).apply()
+            try {
+                val prefs = it.getSharedPreferences("sms_transactions", Context.MODE_PRIVATE)
+                val transactions = prefs.getStringSet("pending_transactions", mutableSetOf())?.toMutableSet() ?: mutableSetOf()
+                
+                // Convert transaction to JSON-like string for storage
+                val transactionString = "${transaction["id"]}|${transaction["amount"]}|${transaction["merchant"]}|${transaction["timestamp"]}|${transaction["tag"]}"
+                transactions.add(transactionString)
+                
+                prefs.edit().putStringSet("pending_transactions", transactions).apply()
+                Log.d(TAG, "Transaction saved to storage: $transactionString")
+            } catch (e: Exception) {
+                Log.e(TAG, "Error saving transaction to storage", e)
+            }
         }
     }
 } 
