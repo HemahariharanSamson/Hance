@@ -7,6 +7,7 @@ void main() async {
   await Hive.initFlutter();
   await Hive.openBox('transactions');
   await Hive.openBox('history');
+  await Hive.openBox('cancelled');
   runApp(const MyApp());
 }
 
@@ -47,7 +48,7 @@ class MainScreen extends StatefulWidget {
 }
 
 class _MainScreenState extends State<MainScreen> {
-  int _selectedIndex = 1; // 0: history, 1: home, 2: plus
+  int _selectedIndex = 1; // 0: history, 1: home, 2: cancelled, 3: plus
 
   List<Map<String, dynamic>> _transactions = [];
   List<Map<String, dynamic>> _history = [];
@@ -56,28 +57,73 @@ class _MainScreenState extends State<MainScreen> {
 
   late Box _transactionsBox;
   late Box _historyBox;
+  late Box _cancelledBox;
+  
+  // Track which cards are expanded
+  Set<int> _expandedCards = {};
+  
+  // Loading state
+  bool _isLoading = true;
+  String _loadingMessage = 'Initializing...';
+  
+  // Cancelled transactions list
+  List<Map<String, dynamic>> _cancelledTransactions = [];
 
   @override
   void initState() {
     super.initState();
+    _initApp();
+  }
+
+  void _initApp() async {
+    setState(() {
+      _loadingMessage = 'Initializing storage...';
+    });
+    
+    // Add delay to show the initial message
+    await Future.delayed(const Duration(milliseconds: 800));
+    
     _initStorage();
     _loadData();
-    _initSmsListener();
+    
+    setState(() {
+      _loadingMessage = 'Scanning SMS messages...';
+    });
+    
+    // Add delay to show the scanning message
+    await Future.delayed(const Duration(milliseconds: 1200));
+    
+    await _initSmsListener();
+    
+    // Add final delay before hiding splash screen
+    await Future.delayed(const Duration(milliseconds: 500));
+    
+    setState(() {
+      _isLoading = false;
+    });
   }
 
   void _initStorage() {
     _transactionsBox = Hive.box('transactions');
     _historyBox = Hive.box('history');
+    _cancelledBox = Hive.box('cancelled');
   }
 
   void _loadData() {
     // Load transactions
     final savedTransactions = _transactionsBox.get('transactions', defaultValue: <Map<String, dynamic>>[]);
     final savedHistory = _historyBox.get('history', defaultValue: <Map<String, dynamic>>[]);
+    final savedCancelled = _cancelledBox.get('cancelled', defaultValue: <Map<String, dynamic>>[]);
     
     setState(() {
       _transactions = _convertFromStorage(savedTransactions);
       _history = _convertFromStorage(savedHistory);
+      _cancelledTransactions = _convertFromStorage(savedCancelled);
+      
+      // Sort transactions by timestamp (latest first)
+      _transactions.sort((a, b) => (b['timestamp'] as DateTime).compareTo(a['timestamp'] as DateTime));
+      _history.sort((a, b) => (b['timestamp'] as DateTime).compareTo(a['timestamp'] as DateTime));
+      _cancelledTransactions.sort((a, b) => (b['timestamp'] as DateTime).compareTo(a['timestamp'] as DateTime));
       
       // Add mock data if no data exists
       if (_transactions.isEmpty && _history.isEmpty) {
@@ -101,7 +147,7 @@ class _MainScreenState extends State<MainScreen> {
       } else {
         // Find the highest ID to set _nextId
         int maxId = 0;
-        for (final tx in [..._transactions, ..._history]) {
+        for (final tx in [..._transactions, ..._history, ..._cancelledTransactions]) {
           if (tx['id'] is int && tx['id'] > maxId) {
             maxId = tx['id'];
           }
@@ -133,6 +179,8 @@ class _MainScreenState extends State<MainScreen> {
             }
           }
         });
+        // Sort transactions by timestamp (latest first)
+        _transactions.sort((a, b) => (b['timestamp'] as DateTime).compareTo(a['timestamp'] as DateTime));
         _saveTransactions();
         // Clear pending transactions after loading
         await _channel.invokeMethod('clearPendingTransactions');
@@ -172,7 +220,11 @@ class _MainScreenState extends State<MainScreen> {
     _historyBox.put('history', _convertToStorage(_history));
   }
 
-  void _initSmsListener() async {
+  void _saveCancelledTransactions() {
+    _cancelledBox.put('cancelled', _convertToStorage(_cancelledTransactions));
+  }
+
+  Future<void> _initSmsListener() async {
     try {
       // Request SMS permissions
       final bool? hasPermission = await _channel.invokeMethod('requestSmsPermissions');
@@ -214,7 +266,13 @@ class _MainScreenState extends State<MainScreen> {
                   return currentKey == transactionKey;
                 });
                 
-                if (!isInHistory && !isInCurrent) {
+                // Check if this transaction was cancelled/deleted
+                final isCancelled = _cancelledTransactions.any((c) {
+                  final cancelledKey = '${c['amount']}_${c['merchant']}_${(c['timestamp'] as DateTime).millisecondsSinceEpoch ~/ 60000}';
+                  return cancelledKey == transactionKey;
+                });
+                
+                if (!isInHistory && !isInCurrent && !isCancelled) {
                   _transactions.insert(0, transaction);
                   _nextId++;
                 }
@@ -222,6 +280,8 @@ class _MainScreenState extends State<MainScreen> {
             }
           }
         });
+        // Sort transactions by timestamp (latest first)
+        _transactions.sort((a, b) => (b['timestamp'] as DateTime).compareTo(a['timestamp'] as DateTime));
         _saveTransactions();
       }
     } catch (e) {
@@ -287,62 +347,91 @@ class _MainScreenState extends State<MainScreen> {
     );
     if (confirmed == true) {
       setState(() {
+        final cancelledTx = _transactions.firstWhere((t) => t['id'] == id);
+        _cancelledTransactions.insert(0, Map<String, dynamic>.from(cancelledTx));
         _transactions.removeWhere((t) => t['id'] == id);
       });
       _saveTransactions();
+      _saveCancelledTransactions();
     }
   }
 
   Widget _transactionCard(Map<String, dynamic> tx) {
+    final isExpanded = _expandedCards.contains(tx['id']);
+    
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
       color: Colors.grey[900],
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              '₹${tx['amount'].toStringAsFixed(2)}',
-              style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              tx['merchant'] ?? 'Unknown Merchant',
-              style: const TextStyle(fontSize: 16, color: Colors.deepPurpleAccent),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              (tx['timestamp'] as DateTime).toLocal().toString(),
-              style: const TextStyle(fontSize: 12, color: Colors.grey),
-            ),
-            const SizedBox(height: 12),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                IconButton(
-                  icon: const Icon(Icons.restaurant, color: Colors.orange),
-                  tooltip: 'Food',
-                  onPressed: () => _tagTransaction(tx['id'], 'Food'),
+      child: InkWell(
+        onTap: () {
+          setState(() {
+            if (isExpanded) {
+              _expandedCards.remove(tx['id']);
+            } else {
+              _expandedCards.add(tx['id']);
+            }
+          });
+        },
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Expanded(
+                    child: Text(
+                      '₹${tx['amount'].toStringAsFixed(2)}',
+                      style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                  Icon(
+                    isExpanded ? Icons.expand_less : Icons.expand_more,
+                    color: Colors.grey,
+                  ),
+                ],
+              ),
+              if (isExpanded) ...[
+                const SizedBox(height: 4),
+                Text(
+                  tx['merchant'] ?? 'Unknown Merchant',
+                  style: const TextStyle(fontSize: 16, color: Colors.deepPurpleAccent),
                 ),
-                IconButton(
-                  icon: const Icon(Icons.lightbulb, color: Colors.blue),
-                  tooltip: 'Utility',
-                  onPressed: () => _tagTransaction(tx['id'], 'Utility'),
+                const SizedBox(height: 4),
+                Text(
+                  (tx['timestamp'] as DateTime).toLocal().toString(),
+                  style: const TextStyle(fontSize: 12, color: Colors.grey),
                 ),
-                IconButton(
-                  icon: const Icon(Icons.celebration, color: Colors.purple),
-                  tooltip: 'Chill',
-                  onPressed: () => _tagTransaction(tx['id'], 'Chill'),
-                ),
-                IconButton(
-                  icon: const Icon(Icons.cancel, color: Colors.red),
-                  tooltip: 'Cancel',
-                  onPressed: () => _cancelTransaction(tx['id']),
-                ),
+                const SizedBox(height: 12),
               ],
-            ),
-          ],
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.restaurant, color: Colors.orange),
+                    tooltip: 'Food',
+                    onPressed: () => _tagTransaction(tx['id'], 'Food'),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.lightbulb, color: Colors.blue),
+                    tooltip: 'Utility',
+                    onPressed: () => _tagTransaction(tx['id'], 'Utility'),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.celebration, color: Colors.purple),
+                    tooltip: 'Chill',
+                    onPressed: () => _tagTransaction(tx['id'], 'Chill'),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.cancel, color: Colors.red),
+                    tooltip: 'Cancel',
+                    onPressed: () => _cancelTransaction(tx['id']),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -376,21 +465,110 @@ class _MainScreenState extends State<MainScreen> {
           children: _transactions.map(_transactionCard).toList(),
         );
       case 2:
+        // Cancelled transactions
+        if (_cancelledTransactions.isEmpty) {
+          return const Center(child: Text('No cancelled transactions.', style: TextStyle(fontSize: 18)));
+        }
+        return ListView(
+          children: _cancelledTransactions.map((tx) => Card(
+            margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+            color: Colors.grey[850],
+            child: ListTile(
+              title: Text('₹${tx['amount'].toStringAsFixed(2)}'),
+              subtitle: Text('${tx['merchant'] ?? 'Unknown'}\n${(tx['timestamp'] as DateTime).toLocal()}'),
+              trailing: Text(tx['tag'] ?? '', style: const TextStyle(fontWeight: FontWeight.bold)),
+              isThreeLine: true,
+            ),
+          )).toList(),
+        );
+      case 3:
         return const Center(child: Text('Add New', style: TextStyle(fontSize: 24)));
       default:
         return const SizedBox.shrink();
     }
   }
 
+  Widget _buildSplashScreen() {
+    return Container(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [Colors.deepPurple, Colors.black],
+        ),
+      ),
+      child: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            // App Icon/Logo
+            Container(
+              width: 120,
+              height: 120,
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: const Icon(
+                Icons.account_balance_wallet,
+                size: 60,
+                color: Colors.white,
+              ),
+            ),
+            const SizedBox(height: 40),
+            
+            // App Title
+            const Text(
+              'Hfin',
+              style: TextStyle(
+                fontSize: 32,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+              ),
+            ),
+            const SizedBox(height: 10),
+            
+            // Subtitle
+            const Text(
+              'Smart Transaction Tracker',
+              style: TextStyle(
+                fontSize: 16,
+                color: Colors.white70,
+              ),
+            ),
+            const SizedBox(height: 60),
+            
+            // Loading Animation
+            Column(
+              children: [
+                const CircularProgressIndicator(
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                ),
+                const SizedBox(height: 20),
+                Text(
+                  _loadingMessage,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    color: Colors.white70,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
+      appBar: _isLoading ? null : AppBar(
         title: const Text('Hfin App'),
         centerTitle: true,
       ),
-      body: _getBody(),
-      bottomNavigationBar: BottomAppBar(
+      body: _isLoading ? _buildSplashScreen() : _getBody(),
+      bottomNavigationBar: _isLoading ? null : BottomAppBar(
         shape: const CircularNotchedRectangle(),
         notchMargin: 8.0,
         child: SizedBox(
@@ -403,10 +581,15 @@ class _MainScreenState extends State<MainScreen> {
                 onPressed: () => _onItemTapped(0),
                 tooltip: 'History',
               ),
+              IconButton(
+                icon: Icon(Icons.delete_outline, color: _selectedIndex == 2 ? Theme.of(context).colorScheme.secondary : Colors.grey),
+                onPressed: () => _onItemTapped(2),
+                tooltip: 'Cancelled',
+              ),
               const SizedBox(width: 40), // space for FAB
               IconButton(
-                icon: Icon(Icons.add, color: _selectedIndex == 2 ? Theme.of(context).colorScheme.secondary : Colors.grey),
-                onPressed: () => _onItemTapped(2),
+                icon: Icon(Icons.add, color: _selectedIndex == 3 ? Theme.of(context).colorScheme.secondary : Colors.grey),
+                onPressed: () => _onItemTapped(3),
                 tooltip: 'Add',
               ),
             ],
@@ -414,7 +597,7 @@ class _MainScreenState extends State<MainScreen> {
         ),
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
-      floatingActionButton: FloatingActionButton(
+      floatingActionButton: _isLoading ? null : FloatingActionButton(
         onPressed: () => _onItemTapped(1),
         tooltip: 'Home',
         child: Icon(Icons.home, color: _selectedIndex == 1 ? Colors.white : Colors.grey),
