@@ -2,6 +2,84 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 
+// Color System - Dual Tone Design (Zomato/Swiggy inspired)
+class AppColors {
+  // Primary Brand Colors - Zomato Orange
+  static const Color primary = Color(0xFFE23744); // Zomato Red-Orange
+  static const Color primaryDark = Color(0xFFCB2D3A); // Darker Orange
+  static const Color primaryLight = Color(0xFFF15A5A); // Lighter Orange
+  
+  // Secondary Colors - Neutral
+  static const Color secondary = Color(0xFF2D2D2D); // Dark Gray
+  static const Color secondaryDark = Color(0xFF1A1A1A); // Darker Gray
+  static const Color secondaryLight = Color(0xFF404040); // Lighter Gray
+  
+  // Dark Mode Colors
+  static const Color darkBackground = Color(0xFF121212); // Pure Black
+  static const Color darkSurface = Color(0xFF1E1E1E); // Dark Gray
+  static const Color darkSurfaceLight = Color(0xFF2D2D2D); // Medium Gray
+  static const Color darkCardBackground = Color(0xFF2A2A2A); // Card Gray
+  
+  // Light Mode Colors
+  static const Color lightBackground = Color(0xFFFAFAFA); // Off White
+  static const Color lightSurface = Color(0xFFFFFFFF); // Pure White
+  static const Color lightSurfaceLight = Color(0xFFF5F5F5); // Light Gray
+  static const Color lightCardBackground = Color(0xFFFFFFFF); // White
+  
+  // Text Colors
+  static const Color darkTextPrimary = Color(0xFFFFFFFF); // White
+  static const Color darkTextSecondary = Color(0xFFB3B3B3); // Light Gray
+  static const Color darkTextTertiary = Color(0xFF808080); // Medium Gray
+  
+  static const Color lightTextPrimary = Color(0xFF1A1A1A); // Dark Gray
+  static const Color lightTextSecondary = Color(0xFF666666); // Medium Gray
+  static const Color lightTextTertiary = Color(0xFF999999); // Light Gray
+  
+  // Semantic Colors
+  static const Color success = Color(0xFF4CAF50); // Green
+  static const Color warning = Color(0xFFFF9800); // Orange
+  static const Color error = Color(0xFFE23744); // Same as primary
+  static const Color info = Color(0xFF2196F3); // Blue
+  
+  // Category Colors - Muted
+  static const Color food = Color(0xFFE23744); // Primary Orange
+  static const Color utility = Color(0xFF4CAF50); // Green
+  static const Color entertainment = Color(0xFF9C27B0); // Purple
+  static const Color transport = Color(0xFF2196F3); // Blue
+  static const Color shopping = Color(0xFFFF9800); // Orange
+  
+  // Gradients
+  static const LinearGradient primaryGradient = LinearGradient(
+    colors: [primary, primaryDark],
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+  );
+  
+  static const LinearGradient darkBackgroundGradient = LinearGradient(
+    colors: [darkBackground, darkSurface],
+    begin: Alignment.topCenter,
+    end: Alignment.bottomCenter,
+  );
+  
+  static const LinearGradient lightBackgroundGradient = LinearGradient(
+    colors: [lightBackground, lightSurface],
+    begin: Alignment.topCenter,
+    end: Alignment.bottomCenter,
+  );
+  
+  static const LinearGradient darkCardGradient = LinearGradient(
+    colors: [darkCardBackground, darkSurfaceLight],
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+  );
+  
+  static const LinearGradient lightCardGradient = LinearGradient(
+    colors: [lightCardBackground, lightSurfaceLight],
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+  );
+}
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Hive.initFlutter();
@@ -11,50 +89,232 @@ void main() async {
   runApp(const MyApp());
 }
 
-class MyApp extends StatelessWidget {
+class MyApp extends StatefulWidget {
   const MyApp({super.key});
+
+  @override
+  State<MyApp> createState() => _MyAppState();
+}
+
+class _MyAppState extends State<MyApp> {
+  bool _isDarkMode = true;
+
+  void toggleTheme() {
+    setState(() {
+      _isDarkMode = !_isDarkMode;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Hfin App',
-      theme: ThemeData(
-        brightness: Brightness.dark,
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: Colors.deepPurple,
-          brightness: Brightness.dark,
-        ),
-        scaffoldBackgroundColor: Colors.black,
-        appBarTheme: const AppBarTheme(
-          backgroundColor: Colors.black,
-        ),
-        bottomNavigationBarTheme: const BottomNavigationBarThemeData(
-          backgroundColor: Colors.black,
-          selectedItemColor: Colors.deepPurpleAccent,
-          unselectedItemColor: Colors.grey,
+      theme: _isDarkMode ? _buildDarkTheme() : _buildLightTheme(),
+      home: MainScreen(
+        isDarkMode: _isDarkMode,
+        onThemeToggle: toggleTheme,
+      ),
+      debugShowCheckedModeBanner: false,
+    );
+  }
+
+  ThemeData _buildDarkTheme() {
+    return ThemeData(
+      brightness: Brightness.dark,
+      colorScheme: const ColorScheme.dark(
+        primary: AppColors.primary,
+        secondary: AppColors.secondary,
+        surface: AppColors.darkSurface,
+        background: AppColors.darkBackground,
+        error: AppColors.error,
+        onPrimary: AppColors.darkTextPrimary,
+        onSecondary: AppColors.darkTextPrimary,
+        onSurface: AppColors.darkTextPrimary,
+        onBackground: AppColors.darkTextPrimary,
+        onError: AppColors.darkTextPrimary,
+      ),
+      scaffoldBackgroundColor: AppColors.darkBackground,
+      appBarTheme: const AppBarTheme(
+        backgroundColor: AppColors.darkSurface,
+        foregroundColor: AppColors.darkTextPrimary,
+        elevation: 0,
+        centerTitle: true,
+        titleTextStyle: TextStyle(
+          fontSize: 20,
+          fontWeight: FontWeight.w600,
+          color: AppColors.darkTextPrimary,
         ),
       ),
-      home: const MainScreen(),
-      debugShowCheckedModeBanner: false,
+      cardTheme: const CardThemeData(
+        color: AppColors.darkCardBackground,
+        elevation: 8,
+        shadowColor: AppColors.primary,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.all(Radius.circular(16)),
+        ),
+      ),
+      bottomNavigationBarTheme: const BottomNavigationBarThemeData(
+        backgroundColor: AppColors.darkSurface,
+        selectedItemColor: AppColors.primary,
+        unselectedItemColor: AppColors.darkTextTertiary,
+        type: BottomNavigationBarType.fixed,
+        elevation: 8,
+      ),
+      floatingActionButtonTheme: const FloatingActionButtonThemeData(
+        backgroundColor: AppColors.primary,
+        foregroundColor: AppColors.darkTextPrimary,
+        elevation: 8,
+        shape: CircleBorder(),
+      ),
+      textTheme: const TextTheme(
+        headlineLarge: TextStyle(
+          fontSize: 32,
+          fontWeight: FontWeight.bold,
+          color: AppColors.darkTextPrimary,
+        ),
+        headlineMedium: TextStyle(
+          fontSize: 24,
+          fontWeight: FontWeight.w600,
+          color: AppColors.darkTextPrimary,
+        ),
+        titleLarge: TextStyle(
+          fontSize: 20,
+          fontWeight: FontWeight.w600,
+          color: AppColors.darkTextPrimary,
+        ),
+        titleMedium: TextStyle(
+          fontSize: 16,
+          fontWeight: FontWeight.w500,
+          color: AppColors.darkTextPrimary,
+        ),
+        bodyLarge: TextStyle(
+          fontSize: 16,
+          color: AppColors.darkTextSecondary,
+        ),
+        bodyMedium: TextStyle(
+          fontSize: 14,
+          color: AppColors.darkTextSecondary,
+        ),
+        labelLarge: TextStyle(
+          fontSize: 14,
+          fontWeight: FontWeight.w500,
+          color: AppColors.darkTextPrimary,
+        ),
+      ),
+      iconTheme: const IconThemeData(
+        color: AppColors.darkTextSecondary,
+        size: 24,
+      ),
+    );
+  }
+
+  ThemeData _buildLightTheme() {
+    return ThemeData(
+      brightness: Brightness.light,
+      colorScheme: const ColorScheme.light(
+        primary: AppColors.primary,
+        secondary: AppColors.secondary,
+        surface: AppColors.lightSurface,
+        background: AppColors.lightBackground,
+        error: AppColors.error,
+        onPrimary: AppColors.lightTextPrimary,
+        onSecondary: AppColors.lightTextPrimary,
+        onSurface: AppColors.lightTextPrimary,
+        onBackground: AppColors.lightTextPrimary,
+        onError: AppColors.lightTextPrimary,
+      ),
+      scaffoldBackgroundColor: AppColors.lightBackground,
+      appBarTheme: const AppBarTheme(
+        backgroundColor: AppColors.lightSurface,
+        foregroundColor: AppColors.lightTextPrimary,
+        elevation: 0,
+        centerTitle: true,
+        titleTextStyle: TextStyle(
+          fontSize: 20,
+          fontWeight: FontWeight.w600,
+          color: AppColors.lightTextPrimary,
+        ),
+      ),
+      cardTheme: const CardThemeData(
+        color: AppColors.lightCardBackground,
+        elevation: 8,
+        shadowColor: AppColors.primary,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.all(Radius.circular(16)),
+        ),
+      ),
+      bottomNavigationBarTheme: const BottomNavigationBarThemeData(
+        backgroundColor: AppColors.lightSurface,
+        selectedItemColor: AppColors.primary,
+        unselectedItemColor: AppColors.lightTextTertiary,
+        type: BottomNavigationBarType.fixed,
+        elevation: 8,
+      ),
+      floatingActionButtonTheme: const FloatingActionButtonThemeData(
+        backgroundColor: AppColors.primary,
+        foregroundColor: AppColors.lightTextPrimary,
+        elevation: 8,
+        shape: CircleBorder(),
+      ),
+      textTheme: const TextTheme(
+        headlineLarge: TextStyle(
+          fontSize: 32,
+          fontWeight: FontWeight.bold,
+          color: AppColors.lightTextPrimary,
+        ),
+        headlineMedium: TextStyle(
+          fontSize: 24,
+          fontWeight: FontWeight.w600,
+          color: AppColors.lightTextPrimary,
+        ),
+        titleLarge: TextStyle(
+          fontSize: 20,
+          fontWeight: FontWeight.w600,
+          color: AppColors.lightTextPrimary,
+        ),
+        titleMedium: TextStyle(
+          fontSize: 16,
+          fontWeight: FontWeight.w500,
+          color: AppColors.lightTextPrimary,
+        ),
+        bodyLarge: TextStyle(
+          fontSize: 16,
+          color: AppColors.lightTextSecondary,
+        ),
+        bodyMedium: TextStyle(
+          fontSize: 14,
+          color: AppColors.lightTextSecondary,
+        ),
+        labelLarge: TextStyle(
+          fontSize: 14,
+          fontWeight: FontWeight.w500,
+          color: AppColors.lightTextPrimary,
+        ),
+      ),
+      iconTheme: const IconThemeData(
+        color: AppColors.lightTextSecondary,
+        size: 24,
+      ),
     );
   }
 }
 
 class MainScreen extends StatefulWidget {
-  const MainScreen({super.key});
+  const MainScreen({super.key, required this.isDarkMode, required this.onThemeToggle});
+
+  final bool isDarkMode;
+  final VoidCallback onThemeToggle;
 
   @override
   State<MainScreen> createState() => _MainScreenState();
 }
 
 class _MainScreenState extends State<MainScreen> {
-  int _selectedIndex = 1; // 0: history, 1: home, 2: cancelled, 3: plus
-
-  List<Map<String, dynamic>> _transactions = [];
-  List<Map<String, dynamic>> _history = [];
-  int _nextId = 1;
+  late int _selectedIndex;
+  late List<Map<String, dynamic>> _transactions;
+  late List<Map<String, dynamic>> _history;
+  late int _nextId;
   static const MethodChannel _channel = MethodChannel('sms_channel');
-
   late Box _transactionsBox;
   late Box _historyBox;
   late Box _cancelledBox;
@@ -76,6 +336,7 @@ class _MainScreenState extends State<MainScreen> {
   @override
   void initState() {
     super.initState();
+    _selectedIndex = 1; // 0: history, 1: home, 2: cancelled, 3: plus
     _initApp();
   }
 
@@ -362,79 +623,182 @@ class _MainScreenState extends State<MainScreen> {
 
   Widget _transactionCard(Map<String, dynamic> tx) {
     final isExpanded = _expandedCards.contains(tx['id']);
+    final isDark = widget.isDarkMode;
     
-    return Card(
-      margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-      color: Colors.grey[900],
-      child: InkWell(
-        onTap: () {
-          setState(() {
-            if (isExpanded) {
-              _expandedCards.remove(tx['id']);
-            } else {
-              _expandedCards.add(tx['id']);
-            }
-          });
-        },
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Expanded(
-                    child: Text(
-                      '₹${tx['amount'].toStringAsFixed(2)}',
-                      style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 6, horizontal: 16),
+      decoration: BoxDecoration(
+        color: isDark ? AppColors.darkCardBackground : AppColors.lightCardBackground,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: isDark ? AppColors.darkSurfaceLight : AppColors.lightSurfaceLight,
+          width: 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(12),
+          onTap: () {
+            setState(() {
+              if (isExpanded) {
+                _expandedCards.remove(tx['id']);
+              } else {
+                _expandedCards.add(tx['id']);
+              }
+            });
+          },
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Expanded(
+                      child: Text(
+                        '₹${tx['amount'].toStringAsFixed(2)}',
+                        style: TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                          color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+                        ),
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: BoxDecoration(
+                        color: AppColors.primary.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Icon(
+                        isExpanded ? Icons.expand_less : Icons.expand_more,
+                        color: AppColors.primary,
+                        size: 18,
+                      ),
+                    ),
+                  ],
+                ),
+                if (isExpanded) ...[
+                  const SizedBox(height: 12),
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: isDark 
+                          ? AppColors.darkSurfaceLight.withOpacity(0.5)
+                          : AppColors.lightSurfaceLight.withOpacity(0.7),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.store,
+                              color: AppColors.primary,
+                              size: 16,
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                tx['merchant'] ?? 'Unknown Merchant',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.access_time,
+                              color: AppColors.secondary,
+                              size: 14,
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              (tx['timestamp'] as DateTime).toLocal().toString(),
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: isDark ? AppColors.darkTextTertiary : AppColors.lightTextTertiary,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
                     ),
                   ),
-                  Icon(
-                    isExpanded ? Icons.expand_less : Icons.expand_more,
-                    color: Colors.grey,
-                  ),
+                  const SizedBox(height: 12),
                 ],
-              ),
-              if (isExpanded) ...[
-                const SizedBox(height: 4),
-                Text(
-                  tx['merchant'] ?? 'Unknown Merchant',
-                  style: const TextStyle(fontSize: 16, color: Colors.deepPurpleAccent),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    _buildActionButton(
+                      icon: Icons.restaurant,
+                      color: AppColors.food,
+                      tooltip: 'Food',
+                      onPressed: () => _tagTransaction(tx['id'], 'Food'),
+                    ),
+                    _buildActionButton(
+                      icon: Icons.lightbulb,
+                      color: AppColors.utility,
+                      tooltip: 'Utility',
+                      onPressed: () => _tagTransaction(tx['id'], 'Utility'),
+                    ),
+                    _buildActionButton(
+                      icon: Icons.celebration,
+                      color: AppColors.entertainment,
+                      tooltip: 'Entertainment',
+                      onPressed: () => _tagTransaction(tx['id'], 'Entertainment'),
+                    ),
+                    _buildActionButton(
+                      icon: Icons.delete_outline,
+                      color: AppColors.error,
+                      tooltip: 'Delete',
+                      onPressed: () => _cancelTransaction(tx['id']),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  (tx['timestamp'] as DateTime).toLocal().toString(),
-                  style: const TextStyle(fontSize: 12, color: Colors.grey),
-                ),
-                const SizedBox(height: 12),
               ],
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  IconButton(
-                    icon: const Icon(Icons.restaurant, color: Colors.orange),
-                    tooltip: 'Food',
-                    onPressed: () => _tagTransaction(tx['id'], 'Food'),
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.lightbulb, color: Colors.blue),
-                    tooltip: 'Utility',
-                    onPressed: () => _tagTransaction(tx['id'], 'Utility'),
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.celebration, color: Colors.purple),
-                    tooltip: 'Chill',
-                    onPressed: () => _tagTransaction(tx['id'], 'Chill'),
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.cancel, color: Colors.red),
-                    tooltip: 'Cancel',
-                    onPressed: () => _cancelTransaction(tx['id']),
-                  ),
-                ],
-              ),
-            ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildActionButton({
+    required IconData icon,
+    required Color color,
+    required String tooltip,
+    required VoidCallback onPressed,
+  }) {
+    return Container(
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: IconButton(
+        icon: Icon(icon, color: color, size: 20),
+        tooltip: tooltip,
+        onPressed: onPressed,
+        style: IconButton.styleFrom(
+          padding: const EdgeInsets.all(10),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(8),
           ),
         ),
       ),
@@ -449,7 +813,26 @@ class _MainScreenState extends State<MainScreen> {
       case 1:
         // Home: show transaction cards
         if (_transactions.isEmpty) {
-          return const Center(child: Text('No new transactions.', style: TextStyle(fontSize: 18)));
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.receipt_long,
+                  size: 64,
+                  color: widget.isDarkMode ? AppColors.darkTextTertiary : AppColors.lightTextTertiary,
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'No new transactions.',
+                  style: TextStyle(
+                    fontSize: 18,
+                    color: widget.isDarkMode ? AppColors.darkTextTertiary : AppColors.lightTextTertiary,
+                  ),
+                ),
+              ],
+            ),
+          );
         }
         return ListView(
           children: _transactions.map(_transactionCard).toList(),
@@ -457,94 +840,207 @@ class _MainScreenState extends State<MainScreen> {
       case 2:
         // Cancelled transactions
         if (_cancelledTransactions.isEmpty) {
-          return const Center(child: Text('No cancelled transactions.', style: TextStyle(fontSize: 18)));
-        }
-        return ListView(
-          children: _cancelledTransactions.map((tx) => Card(
-            margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-            color: Colors.grey[850],
-            child: ListTile(
-              title: Text('₹${tx['amount'].toStringAsFixed(2)}'),
-              subtitle: Text('${tx['merchant'] ?? 'Unknown'}\n${(tx['timestamp'] as DateTime).toLocal()}'),
-              trailing: Text(tx['tag'] ?? '', style: const TextStyle(fontWeight: FontWeight.bold)),
-              isThreeLine: true,
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.delete_outline,
+                  size: 64,
+                  color: widget.isDarkMode ? AppColors.darkTextTertiary : AppColors.lightTextTertiary,
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'No cancelled transactions.',
+                  style: TextStyle(
+                    fontSize: 18,
+                    color: widget.isDarkMode ? AppColors.darkTextTertiary : AppColors.lightTextTertiary,
+                  ),
+                ),
+              ],
             ),
-          )).toList(),
+          );
+        }
+        return ListView.builder(
+          padding: const EdgeInsets.all(16),
+          itemCount: _cancelledTransactions.length,
+          itemBuilder: (context, index) {
+            final tx = _cancelledTransactions[index];
+            final isDark = widget.isDarkMode;
+            
+            return Container(
+              margin: const EdgeInsets.only(bottom: 12),
+              decoration: BoxDecoration(
+                gradient: isDark ? AppColors.darkCardGradient : AppColors.lightCardGradient,
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.error.withOpacity(0.1),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: ListTile(
+                contentPadding: const EdgeInsets.all(16),
+                leading: Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: AppColors.error.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(
+                    Icons.delete_outline,
+                    color: AppColors.error,
+                    size: 24,
+                  ),
+                ),
+                title: Text(
+                  '₹${tx['amount'].toStringAsFixed(2)}',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+                  ),
+                ),
+                subtitle: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const SizedBox(height: 4),
+                    Text(
+                      tx['merchant'] ?? 'Unknown',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      (tx['timestamp'] as DateTime).toLocal().toString(),
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: isDark ? AppColors.darkTextTertiary : AppColors.lightTextTertiary,
+                      ),
+                    ),
+                  ],
+                ),
+                trailing: tx['tag'] != null ? Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: _getTagColor(tx['tag']).withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: _getTagColor(tx['tag']).withOpacity(0.3),
+                      width: 1,
+                    ),
+                  ),
+                  child: Text(
+                    tx['tag']!,
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: _getTagColor(tx['tag']),
+                    ),
+                  ),
+                ) : null,
+              ),
+            );
+          },
         );
-      case 3:
-        return const Center(child: Text('Add New', style: TextStyle(fontSize: 24)));
       default:
         return const SizedBox.shrink();
     }
   }
 
   Widget _buildSplashScreen() {
+    final isDark = widget.isDarkMode;
+    
     return Container(
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [Colors.deepPurple, Colors.black],
-        ),
-      ),
-      child: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            // App Icon/Logo
-            Container(
-              width: 120,
-              height: 120,
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: const Icon(
-                Icons.account_balance_wallet,
-                size: 60,
-                color: Colors.white,
-              ),
-            ),
-            const SizedBox(height: 40),
-            
-            // App Title
-            const Text(
-              'Hfin',
-              style: TextStyle(
-                fontSize: 32,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-              ),
-            ),
-            const SizedBox(height: 10),
-            
-            // Subtitle
-            const Text(
-              'Smart Transaction Tracker',
-              style: TextStyle(
-                fontSize: 16,
-                color: Colors.white70,
-              ),
-            ),
-            const SizedBox(height: 60),
-            
-            // Loading Animation
-            Column(
-              children: [
-                const CircularProgressIndicator(
-                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+      color: isDark ? AppColors.darkBackground : AppColors.lightBackground,
+      child: SafeArea(
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              // App Icon/Logo
+              Container(
+                width: 100,
+                height: 100,
+                decoration: BoxDecoration(
+                  color: AppColors.primary,
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppColors.primary.withOpacity(0.3),
+                      blurRadius: 15,
+                      offset: const Offset(0, 8),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 20),
-                Text(
-                  _loadingMessage,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    color: Colors.white70,
-                  ),
+                child: Icon(
+                  Icons.account_balance_wallet,
+                  size: 50,
+                  color: AppColors.darkTextPrimary,
                 ),
-              ],
-            ),
-          ],
+              ),
+              const SizedBox(height: 32),
+              
+              // App Title
+              Text(
+                'Hfin',
+                style: TextStyle(
+                  fontSize: 32,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.primary,
+                ),
+              ),
+              const SizedBox(height: 8),
+              
+              // Subtitle
+              Text(
+                'Smart Transaction Tracker',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
+                  fontWeight: FontWeight.w400,
+                ),
+              ),
+              const SizedBox(height: 60),
+              
+              // Loading Animation
+              Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: isDark 
+                      ? AppColors.darkSurfaceLight.withOpacity(0.5)
+                      : AppColors.lightSurfaceLight.withOpacity(0.7),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Column(
+                  children: [
+                    SizedBox(
+                      width: 32,
+                      height: 32,
+                      child: CircularProgressIndicator(
+                        valueColor: const AlwaysStoppedAnimation<Color>(AppColors.primary),
+                        strokeWidth: 3,
+                        backgroundColor: AppColors.primary.withOpacity(0.2),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      _loadingMessage,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -556,43 +1052,106 @@ class _MainScreenState extends State<MainScreen> {
       appBar: _isLoading ? null : AppBar(
         title: const Text('Hfin App'),
         centerTitle: true,
+        actions: [
+          IconButton(
+            icon: Icon(
+              widget.isDarkMode ? Icons.light_mode : Icons.dark_mode,
+              color: widget.isDarkMode ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+            ),
+            onPressed: widget.onThemeToggle,
+            tooltip: widget.isDarkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode',
+          ),
+        ],
       ),
       body: _isLoading ? _buildSplashScreen() : _getBody(),
-      bottomNavigationBar: _isLoading ? null : BottomAppBar(
-        shape: const CircularNotchedRectangle(),
-        notchMargin: 8.0,
-        child: SizedBox(
-          height: 60,
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: <Widget>[
-              IconButton(
-                icon: Icon(Icons.history, color: _selectedIndex == 0 ? Theme.of(context).colorScheme.secondary : Colors.grey),
-                onPressed: () => _onItemTapped(0),
-                tooltip: 'History',
+      bottomNavigationBar: _isLoading ? null : Container(
+        decoration: BoxDecoration(
+          color: widget.isDarkMode ? AppColors.darkSurface : AppColors.lightSurface,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.1),
+              blurRadius: 8,
+              offset: const Offset(0, -2),
+            ),
+          ],
+        ),
+        child: SafeArea(
+          child: Container(
+            height: 70,
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: <Widget>[
+                _buildNavItem(
+                  icon: Icons.calendar_month,
+                  label: 'History',
+                  index: 0,
+                  isSelected: _selectedIndex == 0,
+                ),
+                _buildNavItem(
+                  icon: Icons.home,
+                  label: 'Home',
+                  index: 1,
+                  isSelected: _selectedIndex == 1,
+                ),
+                _buildNavItem(
+                  icon: Icons.delete_outline,
+                  label: 'Deleted',
+                  index: 2,
+                  isSelected: _selectedIndex == 2,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNavItem({
+    required IconData icon,
+    required String label,
+    required int index,
+    required bool isSelected,
+  }) {
+    final textColor = widget.isDarkMode ? AppColors.darkTextPrimary : AppColors.lightTextPrimary;
+    final selectedColor = AppColors.primary;
+    final unselectedColor = widget.isDarkMode ? AppColors.darkTextTertiary : AppColors.lightTextTertiary;
+    
+    return Expanded(
+      child: InkWell(
+        onTap: () => _onItemTapped(index),
+        borderRadius: BorderRadius.circular(8),
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 6),
+          decoration: BoxDecoration(
+            color: isSelected ? AppColors.primary.withOpacity(0.1) : Colors.transparent,
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                icon,
+                color: isSelected ? selectedColor : unselectedColor,
+                size: 22,
               ),
-              IconButton(
-                icon: Icon(Icons.delete_outline, color: _selectedIndex == 2 ? Theme.of(context).colorScheme.secondary : Colors.grey),
-                onPressed: () => _onItemTapped(2),
-                tooltip: 'Cancelled',
-              ),
-              const SizedBox(width: 40), // space for FAB
-              IconButton(
-                icon: Icon(Icons.add, color: _selectedIndex == 3 ? Theme.of(context).colorScheme.secondary : Colors.grey),
-                onPressed: () => _onItemTapped(3),
-                tooltip: 'Add',
+              const SizedBox(height: 2),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 10,
+                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+                  color: isSelected ? selectedColor : unselectedColor,
+                ),
+                textAlign: TextAlign.center,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
             ],
           ),
         ),
-      ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
-      floatingActionButton: _isLoading ? null : FloatingActionButton(
-        onPressed: () => _onItemTapped(1),
-        tooltip: 'Home',
-        child: Icon(Icons.home, color: _selectedIndex == 1 ? Colors.white : Colors.grey),
-        backgroundColor: Theme.of(context).colorScheme.primary,
-        elevation: 4.0,
       ),
     );
   }
@@ -640,62 +1199,109 @@ class _MainScreenState extends State<MainScreen> {
     final monthTransactions = _getTransactionsForMonth(_currentMonth);
     final dailyTotals = _getDailyTotalsForMonth(_currentMonth);
     final monthTotal = _getTotalForMonth(_currentMonth);
+    final isDark = widget.isDarkMode;
     
-    return Column(
-      children: [
-        // Month navigation header
-        Container(
-          padding: const EdgeInsets.all(16),
-          color: Colors.grey[900],
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              IconButton(
-                icon: const Icon(Icons.chevron_left, color: Colors.white),
-                onPressed: () {
-                  setState(() {
-                    _currentMonth = DateTime(_currentMonth.year, _currentMonth.month - 1);
-                    _selectedDay = null;
-                  });
-                },
+    return Container(
+      color: isDark ? AppColors.darkBackground : AppColors.lightBackground,
+      child: Column(
+        children: [
+          // Month navigation header
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: isDark ? AppColors.darkSurface : AppColors.lightSurface,
+              border: Border(
+                bottom: BorderSide(
+                  color: isDark ? AppColors.darkSurfaceLight : AppColors.lightSurfaceLight,
+                  width: 1,
+                ),
               ),
-              Column(
-                children: [
-                  Text(
-                    '${_getMonthName(_currentMonth.month)} ${_currentMonth.year}',
-                    style: const TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                _buildNavigationButton(
+                  icon: Icons.chevron_left,
+                  onPressed: () {
+                    setState(() {
+                      _currentMonth = DateTime(_currentMonth.year, _currentMonth.month - 1);
+                      _selectedDay = null;
+                    });
+                  },
+                ),
+                Column(
+                  children: [
+                    Text(
+                      '${_getMonthName(_currentMonth.month)} ${_currentMonth.year}',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+                      ),
                     ),
-                  ),
-                  Text(
-                    'Total: ₹${monthTotal.toStringAsFixed(2)}',
-                    style: const TextStyle(
-                      fontSize: 16,
-                      color: Colors.deepPurpleAccent,
+                    const SizedBox(height: 4),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: AppColors.primary.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        '₹${monthTotal.toStringAsFixed(2)}',
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.primary,
+                        ),
+                      ),
                     ),
-                  ),
-                ],
-              ),
-              IconButton(
-                icon: const Icon(Icons.chevron_right, color: Colors.white),
-                onPressed: () {
-                  setState(() {
-                    _currentMonth = DateTime(_currentMonth.year, _currentMonth.month + 1);
-                    _selectedDay = null;
-                  });
-                },
-              ),
-            ],
+                  ],
+                ),
+                _buildNavigationButton(
+                  icon: Icons.chevron_right,
+                  onPressed: () {
+                    setState(() {
+                      _currentMonth = DateTime(_currentMonth.year, _currentMonth.month + 1);
+                      _selectedDay = null;
+                    });
+                  },
+                ),
+              ],
+            ),
+          ),
+          
+          // Calendar grid
+          Expanded(
+            child: _selectedDay == null ? _buildMonthCalendar(dailyTotals) : _buildDayDetails(_selectedDay!),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildNavigationButton({
+    required IconData icon,
+    required VoidCallback onPressed,
+  }) {
+    final isDark = widget.isDarkMode;
+    
+    return Container(
+      decoration: BoxDecoration(
+        color: isDark 
+            ? AppColors.darkSurfaceLight.withOpacity(0.3)
+            : AppColors.lightSurfaceLight.withOpacity(0.5),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: IconButton(
+        icon: Icon(icon, color: AppColors.primary, size: 20),
+        onPressed: onPressed,
+        style: IconButton.styleFrom(
+          padding: const EdgeInsets.all(8),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(8),
           ),
         ),
-        
-        // Calendar grid
-        Expanded(
-          child: _selectedDay == null ? _buildMonthCalendar(dailyTotals) : _buildDayDetails(_selectedDay!),
-        ),
-      ],
+      ),
     );
   }
 
@@ -703,21 +1309,23 @@ class _MainScreenState extends State<MainScreen> {
     final daysInMonth = DateTime(_currentMonth.year, _currentMonth.month + 1, 0).day;
     final firstDayOfMonth = DateTime(_currentMonth.year, _currentMonth.month, 1);
     final firstWeekday = firstDayOfMonth.weekday;
+    final isDark = widget.isDarkMode;
     
     return Column(
       children: [
         // Weekday headers
         Container(
-          padding: const EdgeInsets.symmetric(vertical: 8),
+          padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
           child: Row(
             children: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
                 .map((day) => Expanded(
                       child: Text(
                         day,
                         textAlign: TextAlign.center,
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          color: Colors.grey,
+                        style: TextStyle(
+                          fontWeight: FontWeight.w600,
+                          color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
+                          fontSize: 11,
                         ),
                       ),
                     ))
@@ -728,12 +1336,12 @@ class _MainScreenState extends State<MainScreen> {
         // Calendar days
         Expanded(
           child: GridView.builder(
-            padding: const EdgeInsets.all(8),
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisCount: 7,
-              childAspectRatio: 1,
-              crossAxisSpacing: 4,
-              mainAxisSpacing: 4,
+              childAspectRatio: 1.0,
+              crossAxisSpacing: 2,
+              mainAxisSpacing: 2,
             ),
             itemCount: 42, // 6 weeks * 7 days
             itemBuilder: (context, index) {
@@ -755,11 +1363,18 @@ class _MainScreenState extends State<MainScreen> {
                     _selectedDay = DateTime(_currentMonth.year, _currentMonth.month, day);
                   });
                 },
+                borderRadius: BorderRadius.circular(6),
                 child: Container(
                   decoration: BoxDecoration(
-                    color: dayTotal > 0 ? Colors.deepPurple.withOpacity(0.3) : Colors.grey[800],
-                    borderRadius: BorderRadius.circular(8),
-                    border: isToday ? Border.all(color: Colors.deepPurpleAccent, width: 2) : null,
+                    color: dayTotal > 0 
+                        ? AppColors.primary.withOpacity(0.1)
+                        : (isDark 
+                            ? AppColors.darkSurfaceLight.withOpacity(0.2)
+                            : AppColors.lightSurfaceLight.withOpacity(0.3)),
+                    borderRadius: BorderRadius.circular(6),
+                    border: isToday 
+                        ? Border.all(color: AppColors.primary, width: 2)
+                        : null,
                   ),
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
@@ -767,18 +1382,28 @@ class _MainScreenState extends State<MainScreen> {
                       Text(
                         day.toString(),
                         style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: isToday ? Colors.deepPurpleAccent : Colors.white,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: isToday 
+                              ? AppColors.primary 
+                              : (isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary),
                         ),
                       ),
                       if (dayTotal > 0) ...[
-                        const SizedBox(height: 2),
-                        Text(
-                          '₹${dayTotal.toStringAsFixed(0)}',
-                          style: const TextStyle(
-                            fontSize: 10,
-                            color: Colors.deepPurpleAccent,
+                        const SizedBox(height: 1),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 1),
+                          decoration: BoxDecoration(
+                            color: AppColors.primary.withOpacity(0.2),
+                            borderRadius: BorderRadius.circular(3),
+                          ),
+                          child: Text(
+                            '₹${dayTotal.toStringAsFixed(0)}',
+                            style: const TextStyle(
+                              fontSize: 7,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.primary,
+                            ),
                           ),
                         ),
                       ],
@@ -796,78 +1421,162 @@ class _MainScreenState extends State<MainScreen> {
   Widget _buildDayDetails(DateTime day) {
     final dayTransactions = _getTransactionsForDay(day);
     final dayTotal = _getTotalForDay(day);
+    final isDark = widget.isDarkMode;
     
-    return Column(
-      children: [
-        // Day header
-        Container(
-          padding: const EdgeInsets.all(16),
-          color: Colors.grey[900],
-          child: Row(
-            children: [
-              IconButton(
-                icon: const Icon(Icons.arrow_back, color: Colors.white),
-                onPressed: () {
-                  setState(() {
-                    _selectedDay = null;
-                  });
-                },
-              ),
-              Expanded(
-                child: Column(
-                  children: [
-                    Text(
-                      '${_getMonthName(day.month)} ${day.day}, ${day.year}',
-                      style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                    ),
-                    Text(
-                      'Total: ₹${dayTotal.toStringAsFixed(2)}',
-                      style: const TextStyle(
-                        fontSize: 16,
-                        color: Colors.deepPurpleAccent,
-                      ),
-                    ),
-                  ],
+    return Container(
+      color: isDark ? AppColors.darkBackground : AppColors.lightBackground,
+      child: Column(
+        children: [
+          // Day header
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: isDark ? AppColors.darkSurface : AppColors.lightSurface,
+              border: Border(
+                bottom: BorderSide(
+                  color: isDark ? AppColors.darkSurfaceLight : AppColors.lightSurfaceLight,
+                  width: 1,
                 ),
               ),
-            ],
-          ),
-        ),
-        
-        // Day transactions
-        Expanded(
-          child: dayTransactions.isEmpty
-              ? const Center(
-                  child: Text(
-                    'No transactions for this day',
-                    style: TextStyle(fontSize: 16, color: Colors.grey),
-                  ),
-                )
-              : ListView.builder(
-                  itemCount: dayTransactions.length,
-                  itemBuilder: (context, index) {
-                    final tx = dayTransactions[index];
-                    return Card(
-                      margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 16),
-                      color: Colors.grey[850],
-                      child: ListTile(
-                        title: Text('₹${tx['amount'].toStringAsFixed(2)}'),
-                        subtitle: Text(tx['merchant'] ?? 'Unknown'),
-                        trailing: Text(
-                          tx['tag'] ?? '',
-                          style: const TextStyle(fontWeight: FontWeight.bold),
-                        ),
-                      ),
-                    );
+            ),
+            child: Row(
+              children: [
+                _buildNavigationButton(
+                  icon: Icons.arrow_back,
+                  onPressed: () {
+                    setState(() {
+                      _selectedDay = null;
+                    });
                   },
                 ),
-        ),
-      ],
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '${_getMonthName(day.month)} ${day.day}, ${day.year}',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: AppColors.secondary.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Text(
+                          '₹${dayTotal.toStringAsFixed(2)}',
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.secondary,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          
+          // Day transactions
+          Expanded(
+            child: dayTransactions.isEmpty
+                ? Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.receipt_long,
+                          size: 48,
+                          color: isDark ? AppColors.darkTextTertiary : AppColors.lightTextTertiary,
+                        ),
+                        const SizedBox(height: 12),
+                        Text(
+                          'No transactions for this day',
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: isDark ? AppColors.darkTextTertiary : AppColors.lightTextTertiary,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
+                    ),
+                  )
+                : ListView.builder(
+                    padding: const EdgeInsets.all(12),
+                    itemCount: dayTransactions.length,
+                    itemBuilder: (context, index) {
+                      final tx = dayTransactions[index];
+                      return Container(
+                        margin: const EdgeInsets.only(bottom: 8),
+                        decoration: BoxDecoration(
+                          color: isDark ? AppColors.darkCardBackground : AppColors.lightCardBackground,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: isDark ? AppColors.darkSurfaceLight : AppColors.lightSurfaceLight,
+                            width: 1,
+                          ),
+                        ),
+                        child: ListTile(
+                          contentPadding: const EdgeInsets.all(12),
+                          title: Text(
+                            '₹${tx['amount'].toStringAsFixed(2)}',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+                            ),
+                          ),
+                          subtitle: Text(
+                            tx['merchant'] ?? 'Unknown',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
+                            ),
+                          ),
+                          trailing: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: _getTagColor(tx['tag']).withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              tx['tag'] ?? '',
+                              style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w600,
+                                color: _getTagColor(tx['tag']),
+                              ),
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+          ),
+        ],
+      ),
     );
+  }
+
+  Color _getTagColor(String? tag) {
+    switch (tag) {
+      case 'Food':
+        return AppColors.food;
+      case 'Utility':
+        return AppColors.utility;
+      case 'Entertainment':
+        return AppColors.entertainment;
+      default:
+        return widget.isDarkMode ? AppColors.darkTextTertiary : AppColors.lightTextTertiary;
+    }
   }
 
   String _getMonthName(int month) {
