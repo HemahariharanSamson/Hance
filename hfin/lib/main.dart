@@ -867,6 +867,25 @@ class _MainScreenState extends State<MainScreen> {
                         ],
                       ),
                     ),
+                    // Add credited/debited tag
+                    Container(
+                      margin: const EdgeInsets.only(left: 8, top: 2),
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: isDebited
+                            ? AppColors.error.withOpacity(0.13)
+                            : AppColors.success.withOpacity(0.13),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        isDebited ? 'DEBITED' : 'CREDITED',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: isDebited ? AppColors.error : AppColors.success,
+                        ),
+                      ),
+                    ),
                     if (tag != null) ...[
                       const SizedBox(width: 8),
                       Container(
