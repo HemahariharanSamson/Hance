@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:flutter_card_swiper/flutter_card_swiper.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 
 // Color System - Dual Tone Design (Zomato/Swiggy inspired)
 class AppColors {
@@ -334,6 +336,9 @@ class _MainScreenState extends State<MainScreen> {
   DateTime _currentMonth = DateTime.now();
   DateTime? _selectedDay;
 
+  // 1. Add a map to track selected action per transaction at the top of _MainScreenState:
+  Map<int, String?> _selectedAction = {};
+
   @override
   void initState() {
     super.initState();
@@ -374,7 +379,98 @@ class _MainScreenState extends State<MainScreen> {
     _historyBox = Hive.box('history');
     _cancelledBox = Hive.box('cancelled');
   }
-
+// ======================================
+  // ADD THIS METHOD TO CREATE TEST DATA
+  void _addTestData() {
+    // Define a specific test date - July 09, 2025 (today)
+    final testDate = DateTime(2025, 7, 09);
+    
+    // Only add test data if not already present
+    final hasTestData = _transactions.any((tx) {
+      final txDate = tx['timestamp'] as DateTime;
+      return txDate.year == testDate.year && 
+            txDate.month == testDate.month && 
+            txDate.day == testDate.day;
+    });
+    
+    if (!hasTestData) {
+      final testTransactions = [
+        {
+          'id': 1001,
+          'amount': 450.00,
+          'merchant': 'Swiggy - Pizza Hut',
+          'fromAccount': 'HDFC Bank XX1234',
+          'toAccount': 'Swiggy Merchant',
+          'timestamp': testDate.add(const Duration(hours: 12, minutes: 30)),
+          'tag': null, // null because these are untagged transactions
+          'isDebited': true,
+        },
+        {
+          'id': 1002,
+          'amount': 75.50,
+          'merchant': 'Uber Auto',
+          'fromAccount': 'HDFC Bank XX1234',
+          'toAccount': 'Uber Technologies',
+          'timestamp': testDate.add(const Duration(hours: 9, minutes: 15)),
+          'tag': null,
+          'isDebited': true,
+        },
+        {
+          'id': 1003,
+          'amount': 1250.00,
+          'merchant': 'Amazon Shopping',
+          'fromAccount': 'HDFC Bank XX1234',
+          'toAccount': 'Amazon Seller',
+          'timestamp': testDate.add(const Duration(hours: 14, minutes: 45)),
+          'tag': null,
+          'isDebited': true,
+        },
+      ];
+      
+      // Add to current transactions (for home screen)
+      _transactions.addAll(testTransactions);
+      
+      // Also add some historical data for calendar testing
+      final historicalTransactions = [
+        {
+          'id': 1004,
+          'amount': 2500.00,
+          'merchant': 'Salary Credit',
+          'fromAccount': 'ABC Company Ltd',
+          'toAccount': 'HDFC Bank XX1234',
+          'timestamp': testDate.add(const Duration(hours: 10, minutes: 0)),
+          'tag': null,
+          'isDebited': false,
+        },
+        {
+          'id': 1005,
+          'amount': 350.00,
+          'merchant': 'Zomato - McDonalds',
+          'fromAccount': 'HDFC Bank XX1234',
+          'toAccount': 'Zomato Merchant',
+          'timestamp': testDate.add(const Duration(hours: 20, minutes: 30)),
+          'tag': 'Food',
+          'isDebited': true,
+        },
+        {
+          'id': 1006,
+          'amount': 850.00,
+          'merchant': 'BESCOM Electricity',
+          'fromAccount': 'HDFC Bank XX1234',
+          'toAccount': 'BESCOM',
+          'timestamp': testDate.add(const Duration(hours: 16, minutes: 20)),
+          'tag': 'Utility',
+          'isDebited': true,
+        },
+      ];
+      
+      // Add to history (for calendar testing)
+      _history.addAll(historicalTransactions);
+      
+      print('Added test data for ${testDate.day}/${testDate.month}/${testDate.year}');
+    }
+  }
+// ====================================== 
   void _loadData() {
     // Load transactions
     final savedTransactions = _transactionsBox.get('transactions', defaultValue: <Map<String, dynamic>>[]);
@@ -385,7 +481,10 @@ class _MainScreenState extends State<MainScreen> {
       _transactions = _convertFromStorage(savedTransactions);
       _history = _convertFromStorage(savedHistory);
       _cancelledTransactions = _convertFromStorage(savedCancelled);
-      
+
+// ======================================
+      _addTestData(); //REMOVE
+// ======================================
       // Sort transactions by timestamp (latest first)
       _transactions.sort((a, b) => (b['timestamp'] as DateTime).compareTo(a['timestamp'] as DateTime));
       _history.sort((a, b) => (b['timestamp'] as DateTime).compareTo(a['timestamp'] as DateTime));
@@ -608,32 +707,13 @@ class _MainScreenState extends State<MainScreen> {
   }
 
   void _cancelTransaction(int id) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Delete Transaction'),
-        content: const Text('Are you sure you want to delete this transaction?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('No'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Yes'),
-          ),
-        ],
-      ),
-    );
-    if (confirmed == true) {
-      setState(() {
-        final cancelledTx = _transactions.firstWhere((t) => t['id'] == id);
-        _cancelledTransactions.insert(0, Map<String, dynamic>.from(cancelledTx));
-        _transactions.removeWhere((t) => t['id'] == id);
-      });
-      _saveTransactions();
-      _saveCancelledTransactions();
-    }
+    setState(() {
+      final cancelledTx = _transactions.firstWhere((t) => t['id'] == id);
+      _cancelledTransactions.insert(0, Map<String, dynamic>.from(cancelledTx));
+      _transactions.removeWhere((t) => t['id'] == id);
+    });
+    _saveTransactions();
+    _saveCancelledTransactions();
   }
 
   Widget _transactionCard(Map<String, dynamic> tx) {
@@ -758,28 +838,25 @@ class _MainScreenState extends State<MainScreen> {
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
                     Expanded(child: _buildActionButton(
-                      icon: Icons.restaurant,
+                      emoji: '🍔',
                       label: 'Food',
                       tooltip: 'Tag as Food',
+                      selected: false,
                       onPressed: () => _tagTransaction(tx['id'], 'Food'),
                     )),
                     Expanded(child: _buildActionButton(
-                      icon: Icons.lightbulb,
+                      emoji: '⚡',
                       label: 'Utility',
                       tooltip: 'Tag as Utility',
+                      selected: false,
                       onPressed: () => _tagTransaction(tx['id'], 'Utility'),
                     )),
                     Expanded(child: _buildActionButton(
-                      icon: Icons.celebration,
+                      emoji: '😎',
                       label: 'Chill',
                       tooltip: 'Tag as Chill',
+                      selected: false,
                       onPressed: () => _tagTransaction(tx['id'], 'Chill'),
-                    )),
-                    Expanded(child: _buildActionButton(
-                      icon: Icons.delete_outline,
-                      label: 'Delete',
-                      tooltip: 'Delete Transaction',
-                      onPressed: () => _cancelTransaction(tx['id']),
                     )),
                   ],
                 ),
@@ -792,11 +869,11 @@ class _MainScreenState extends State<MainScreen> {
   }
 
   Widget _modernTransactionCard(Map<String, dynamic> tx, {bool showActions = true}) {
-    final isExpanded = _expandedCards.contains(tx['id']);
     final isDark = widget.isDarkMode;
     final isDebited = tx['isDebited'] == true;
     final isCredited = !isDebited;
     final tag = tx['tag'] as String?;
+    final selected = _selectedAction[tx['id']];
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 6, horizontal: 20),
       decoration: BoxDecoration(
@@ -816,199 +893,169 @@ class _MainScreenState extends State<MainScreen> {
           width: 1.1,
         ),
       ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          borderRadius: BorderRadius.circular(18),
-          onTap: () {
-            setState(() {
-              if (isExpanded) {
-                _expandedCards.remove(tx['id']);
-              } else {
-                _expandedCards.add(tx['id']);
-              }
-            });
-          },
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 18),
-            child: Column(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 18),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Icon(
-                      isDebited ? Icons.arrow_upward_rounded : Icons.arrow_downward_rounded,
-                      color: isDebited ? AppColors.error : AppColors.success,
-                      size: 28,
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            '₹ ${tx['amount'].toStringAsFixed(2)}',
-                            style: TextStyle(
-                              fontSize: 22,
-                              fontWeight: FontWeight.w700,
-                              color: isDebited ? AppColors.error : AppColors.success,
-                            ),
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            tx['merchant'] ?? 'Unknown',
-                            style: TextStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w500,
-                              color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    // Add credited/debited tag
-                    Container(
-                      margin: const EdgeInsets.only(left: 8, top: 2),
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: isDebited
-                            ? AppColors.error.withOpacity(0.13)
-                            : AppColors.success.withOpacity(0.13),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(
-                        isDebited ? 'DEBITED' : 'CREDITED',
+                Icon(
+                  isDebited ? Icons.arrow_upward_rounded : Icons.arrow_downward_rounded,
+                  color: isDebited ? AppColors.error : AppColors.success,
+                  size: 28,
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '₹ ${tx['amount'].toStringAsFixed(2)}',
                         style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600,
+                          fontSize: 22,
+                          fontWeight: FontWeight.w700,
                           color: isDebited ? AppColors.error : AppColors.success,
                         ),
                       ),
-                    ),
-                    if (tag != null) ...[
-                      const SizedBox(width: 8),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: _getTagColor(tag).withOpacity(0.13),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Text(
-                          tag,
-                          style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w600,
-                            color: _getTagColor(tag),
-                          ),
+                      const SizedBox(height: 2),
+                      Text(
+                        tx['merchant'] ?? 'Unknown',
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w500,
+                          color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
                         ),
                       ),
                     ],
-                  ],
+                  ),
                 ),
-                const SizedBox(height: 10),
-                Row(
-                  children: [
-                    Icon(Icons.account_balance_wallet_outlined, size: 18, color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary),
-                    const SizedBox(width: 5),
-                    Flexible(
-                      child: Text(
-                        'From: ${tx['fromAccount'] ?? 'Unknown'}',
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
-                          fontWeight: FontWeight.w500,
-                        ),
-                        overflow: TextOverflow.ellipsis,
-                      ),
+                // Add credited/debited tag
+                Container(
+                  margin: const EdgeInsets.only(left: 8, top: 2),
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: isDebited
+                        ? AppColors.error.withOpacity(0.13)
+                        : AppColors.success.withOpacity(0.13),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    isDebited ? 'DEBITED' : 'CREDITED',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      color: isDebited ? AppColors.error : AppColors.success,
                     ),
-                    const SizedBox(width: 12),
-                    Icon(Icons.arrow_forward_ios_rounded, size: 15, color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary),
-                    const SizedBox(width: 5),
-                    Flexible(
-                      child: Text(
-                        'To: ${tx['toAccount'] ?? 'Unknown'}',
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
-                          fontWeight: FontWeight.w500,
-                        ),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
-                const SizedBox(height: 10),
-                Row(
-                  children: [
-                    Icon(Icons.calendar_today_outlined, size: 16, color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary),
-                    const SizedBox(width: 5),
-                    Text(
-                      _formatDate(tx['timestamp']),
+                if (tag != null) ...[
+                  const SizedBox(width: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: _getTagColor(tag).withOpacity(0.13),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      tag,
                       style: TextStyle(
-                        fontSize: 13,
-                        color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
-                        fontWeight: FontWeight.w500,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: _getTagColor(tag),
                       ),
                     ),
-                    const SizedBox(width: 14),
-                    Icon(Icons.access_time_outlined, size: 16, color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary),
-                    const SizedBox(width: 5),
-                    Text(
-                      _formatTime(tx['timestamp']),
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ],
-                ),
-                if (isExpanded && showActions) ...[
-                  const SizedBox(height: 16),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: [
-                      Expanded(child: _buildActionButton(
-                        icon: Icons.fastfood_outlined,
-                        label: 'Food',
-                        tooltip: 'Tag as Food',
-                        onPressed: () => _tagTransaction(tx['id'], 'Food'),
-                      )),
-                      Expanded(child: _buildActionButton(
-                        icon: Icons.bolt_outlined,
-                        label: 'Utility',
-                        tooltip: 'Tag as Utility',
-                        onPressed: () => _tagTransaction(tx['id'], 'Utility'),
-                      )),
-                      Expanded(child: _buildActionButton(
-                        icon: Icons.emoji_emotions_outlined,
-                        label: 'Chill',
-                        tooltip: 'Tag as Chill',
-                        onPressed: () => _tagTransaction(tx['id'], 'Chill'),
-                      )),
-                      Expanded(child: _buildActionButton(
-                        icon: Icons.delete_outline,
-                        label: 'Delete',
-                        tooltip: 'Delete Transaction',
-                        onPressed: () => _cancelTransaction(tx['id']),
-                      )),
-                    ],
                   ),
                 ],
-                // Only show expand/collapse arrow if showActions is true
-                if (showActions)
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: Icon(
-                      isExpanded ? Icons.expand_less : Icons.expand_more,
-                      color: isDark ? AppColors.darkTextTertiary : AppColors.lightTextTertiary,
-                      size: 22,
-                    ),
-                  ),
               ],
             ),
-          ),
+            const SizedBox(height: 10),
+            _buildTransactionInfoGrid(tx),
+            const SizedBox(height: 10),
+            if (showActions) ...[
+              const SizedBox(height: 16),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  _buildCategoryActionButton(
+                    icon: FontAwesomeIcons.utensils,
+                    color: AppColors.food,
+                    label: 'Food',
+                    selected: selected == 'Food',
+                    onPressed: () {
+                      setState(() {
+                        _selectedAction[tx['id']] = 'Food';
+                      });
+                    },
+                  ),
+                  _buildCategoryActionButton(
+                    icon: FontAwesomeIcons.bolt,
+                    color: AppColors.utility,
+                    label: 'Utility',
+                    selected: selected == 'Utility',
+                    onPressed: () {
+                      setState(() {
+                        _selectedAction[tx['id']] = 'Utility';
+                      });
+                    },
+                  ),
+                  _buildCategoryActionButton(
+                    icon: FontAwesomeIcons.spa,
+                    color: AppColors.chill,
+                    label: 'Chill',
+                    selected: selected == 'Chill',
+                    onPressed: () {
+                      setState(() {
+                        _selectedAction[tx['id']] = 'Chill';
+                      });
+                    },
+                  ),
+                ],
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCategoryActionButton({
+    required IconData icon,
+    required Color color,
+    required String label,
+    required bool selected,
+    required VoidCallback onPressed,
+  }) {
+    return Expanded(
+      child: GestureDetector(
+        onTap: onPressed,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              decoration: BoxDecoration(
+                color: selected ? color.withOpacity(0.15) : Colors.transparent,
+                shape: BoxShape.circle,
+                border: selected ? Border.all(color: color, width: 2) : null,
+              ),
+              padding: const EdgeInsets.all(8), // Reduced padding
+              child: FaIcon(
+                icon,
+                color: color,
+                size: 24, // Slightly smaller for better fit
+              ),
+            ),
+            const SizedBox(height: 2), // Less space below icon
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: selected ? color : (label == 'Delete' ? AppColors.error : Colors.grey[700]),
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -1076,43 +1123,49 @@ class _MainScreenState extends State<MainScreen> {
   }
 
   Widget _buildActionButton({
-    required IconData icon,
+    required String emoji,
     required String label,
     required String tooltip,
+    required bool selected,
     required VoidCallback onPressed,
   }) {
-    final isDark = widget.isDarkMode;
-    
-    return Container(
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 180),
+      curve: Curves.easeInOut,
       decoration: BoxDecoration(
-        color: isDark 
-            ? AppColors.darkSurfaceLight.withOpacity(0.3)
-            : AppColors.lightSurfaceLight.withOpacity(0.5),
-        borderRadius: BorderRadius.circular(8),
+        color: selected ? Colors.yellow[100] : Colors.grey[200],
+        borderRadius: BorderRadius.circular(12),
+        border: selected ? Border.all(color: Colors.orange, width: 2) : null,
+        boxShadow: selected
+            ? [BoxShadow(color: Colors.orange.withOpacity(0.2), blurRadius: 8)]
+            : [],
       ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          IconButton(
-            icon: Icon(icon, color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary, size: 18),
-            tooltip: tooltip,
-            onPressed: onPressed,
-            style: IconButton.styleFrom(
-              padding: const EdgeInsets.all(4), // reduced from 8
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
+      child: GestureDetector(
+        onTap: onPressed,
+        child: AnimatedScale(
+          scale: selected ? 1.18 : 1.0,
+          duration: const Duration(milliseconds: 180),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Padding(
+                padding: const EdgeInsets.only(top: 8, bottom: 2),
+                child: Text(
+                  emoji,
+                  style: const TextStyle(fontSize: 28),
+                ),
               ),
-            ),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: selected ? Colors.orange[900] : Colors.grey[700],
+                ),
+              ),
+            ],
           ),
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 10,
-              color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }
@@ -1193,7 +1246,72 @@ class _MainScreenState extends State<MainScreen> {
                     ),
                   ),
                 ),
-                ..._transactions.map(_modernTransactionCard).toList(),
+                SizedBox(
+                  height: 350, // Adjust as needed for card height
+                  child: CardSwiper(
+                    key: ValueKey(_transactions.length), // Add this line
+                    cardsCount: _transactions.length,
+                    numberOfCardsDisplayed: _transactions.length.clamp(1, 3),
+                    isLoop: false,
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
+                    cardBuilder: (context, index, percentThresholdX, percentThresholdY) {
+                      final tx = _transactions[index];
+                      return _modernTransactionCard(tx);
+                    },
+                    onSwipe: (index, direction, CardSwiperDirection? swipeDirection) async {
+                      // Check if index is still valid after potential previous deletions
+                      if (index >= _transactions.length) {
+                        return false;
+                      }
+                      final tx = _transactions[index];
+                      final selected = _selectedAction[tx['id']];
+                      if (swipeDirection == CardSwiperDirection.left) {
+                        // Left swipe: require category selection
+                        if (selected == null || selected == 'Delete') {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Please select a category before swiping left!')),
+                          );
+                          return false;
+                        } else {
+                          _tagTransaction(tx['id'], selected);
+                          setState(() {
+                            _selectedAction[tx['id']] = null;
+                          });
+                          return true;
+                        }
+                      } else if (swipeDirection == CardSwiperDirection.right) {
+                        // Right swipe: ask for confirmation
+                        final confirmed = await showDialog<bool>(
+                          context: context,
+                          builder: (context) => AlertDialog(
+                            title: const Text('Delete Transaction'),
+                            content: Text('Are you sure you want to delete this transaction for ₹${tx['amount'].toStringAsFixed(2)}?'),
+                            actions: [
+                              TextButton(
+                                onPressed: () => Navigator.of(context).pop(false),
+                                child: const Text('No'),
+                              ),
+                              TextButton(
+                                onPressed: () => Navigator.of(context).pop(true),
+                                child: const Text('Yes'),
+                              ),
+                            ],
+                          ),
+                        );
+                        if (confirmed == true) {
+                          _cancelTransaction(tx['id']);
+                          setState(() {
+                            _selectedAction[tx['id']] = null;
+                          });
+                          return true; // allow swipe
+                        } else {
+                          return false; // prevent swipe
+                        }
+                      }
+                      return true;
+                    },
+                  ),
+                ),
                 const SizedBox(height: 8),
               ],
             ),
@@ -2018,6 +2136,101 @@ class _MainScreenState extends State<MainScreen> {
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildTransactionInfoGrid(Map<String, dynamic> tx) {
+    final isDark = widget.isDarkMode;
+    final borderColor = isDark ? AppColors.darkSurfaceLight : AppColors.lightSurfaceLight;
+    return Container(
+      decoration: BoxDecoration(
+        color: isDark ? AppColors.darkSurfaceLight.withOpacity(0.18) : AppColors.lightSurfaceLight.withOpacity(0.35),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: borderColor, width: 1.1),
+      ),
+      child: Table(
+        columnWidths: const {
+          0: FlexColumnWidth(1),
+          1: FlexColumnWidth(1),
+        },
+        children: [
+          TableRow(
+            children: [
+              _buildInfoCell(
+                icon: Icons.account_balance_wallet_outlined,
+                label: 'From',
+                value: tx['fromAccount'] ?? 'Unknown',
+                isDark: isDark,
+              ),
+              _buildInfoCell(
+                icon: Icons.arrow_forward_ios_rounded,
+                label: 'To',
+                value: tx['toAccount'] ?? 'Unknown',
+                isDark: isDark,
+              ),
+            ],
+          ),
+          TableRow(
+            children: [
+              _buildInfoCell(
+                icon: Icons.calendar_today_outlined,
+                label: 'Date',
+                value: _formatDate(tx['timestamp']),
+                isDark: isDark,
+              ),
+              _buildInfoCell(
+                icon: Icons.access_time_outlined,
+                label: 'Time',
+                value: _formatTime(tx['timestamp']),
+                isDark: isDark,
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInfoCell({
+    required IconData icon,
+    required String label,
+    required String value,
+    required bool isDark,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.all(7.0),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, size: 15, color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary),
+          const SizedBox(width: 5),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 10,
+                    color: isDark ? AppColors.darkTextTertiary : AppColors.lightTextTertiary,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                Text(
+                  value,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+                    fontWeight: FontWeight.w600,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
