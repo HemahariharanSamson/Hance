@@ -1417,7 +1417,19 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
         child: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min,
             children: [
+              // Modern illustration
+              Padding(
+                padding: const EdgeInsets.only(bottom: 32.0),
+                child: SizedBox(
+                  height: 180,
+                  child: Image.asset(
+                    'assets/icon/sms_scan.png',
+                    fit: BoxFit.contain,
+                  ),
+                ),
+              ),
               // App Title (modern, bold, spaced)
               Text(
                 'Hance',
@@ -1429,38 +1441,37 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
                   fontFamily: 'Roboto',
                 ),
               ),
-              const SizedBox(height: 40),
-              // Minimal loading indicator
-              Container(
-                padding: const EdgeInsets.all(24),
-                decoration: BoxDecoration(
-                  color: isDark 
-                      ? AppColors.darkSurfaceLight.withOpacity(0.4)
-                      : AppColors.lightSurfaceLight.withOpacity(0.7),
-                  borderRadius: BorderRadius.circular(16),
+              const SizedBox(height: 32),
+              // Linear progress bar
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 48.0),
+                child: LinearProgressIndicator(
+                  valueColor: const AlwaysStoppedAnimation<Color>(AppColors.primary),
+                  backgroundColor: AppColors.primary.withOpacity(0.13),
+                  minHeight: 6,
                 ),
-                child: Column(
-                  children: [
-                    SizedBox(
-                      width: 36,
-                      height: 36,
-                      child: CircularProgressIndicator(
-                        valueColor: const AlwaysStoppedAnimation<Color>(AppColors.primary),
-                        strokeWidth: 3.2,
-                        backgroundColor: AppColors.primary.withOpacity(0.13),
-                      ),
-                    ),
-                    const SizedBox(height: 18),
-                    Text(
-                      _loadingMessage,
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
-                        fontWeight: FontWeight.w500,
-                        letterSpacing: 0.2,
-                      ),
-                    ),
-                  ],
+              ),
+              const SizedBox(height: 24),
+              // Loading message
+              Text(
+                _loadingMessage,
+                style: TextStyle(
+                  fontSize: 15,
+                  color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
+                  fontWeight: FontWeight.w500,
+                  letterSpacing: 0.2,
+                ),
+              ),
+              const SizedBox(height: 18),
+              // Tagline/tip
+              Text(
+                'Your SMS transactions are safe and private.',
+                style: TextStyle(
+                  fontSize: 13,
+                  color: isDark ? AppColors.darkTextTertiary : AppColors.lightTextTertiary,
+                  fontWeight: FontWeight.w400,
+                  fontStyle: FontStyle.italic,
+                  letterSpacing: 0.1,
                 ),
               ),
             ],
