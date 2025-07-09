@@ -6,6 +6,7 @@ import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:fl_chart/fl_chart.dart';
 
 // Color System - Dual Tone Design (Zomato/Swiggy inspired)
 class AppColors {
@@ -345,6 +346,22 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
   // Shake animation
   late AnimationController _shakeController;
   late Animation<double> _shakeAnimation;
+
+  // For analysis selection
+  String _analysisType = 'Monthly'; // or 'Yearly'
+  int _selectedYear = DateTime.now().year;
+  int _selectedMonth = DateTime.now().month;
+  List<int> get _yearOptions {
+    // Always show a range from earliest year in data to current year
+    int minYear = DateTime.now().year;
+    for (final tx in _history) {
+      final dt = tx['timestamp'] as DateTime;
+      if (dt.year < minYear) minYear = dt.year;
+    }
+    int maxYear = DateTime.now().year;
+    return [for (int y = minYear; y <= maxYear; y++) y];
+  }
+  List<int> get _monthOptions => List.generate(12, (i) => i + 1);
 
   @override
   void initState() {
@@ -1287,7 +1304,7 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
                           cardBuilder: (context, index, percentThresholdX, percentThresholdY) {
                             final tx = _transactions[index];
                             return _modernTransactionCard(tx);
-                          },  
+                          },
                           onSwipe: (index, direction, CardSwiperDirection? swipeDirection) async {
                             // Check if index is still valid after potential previous deletions
                             if (index >= _transactions.length) {
@@ -1384,8 +1401,8 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
                                 ),
                               ),
                             ],
-                          ),
-                          const SizedBox(height: 8),
+                ),
+                const SizedBox(height: 8),
                           FutureBuilder<List<Map<String, String>>>(
                             future: _fetchFinanceNews(),
                             builder: (context, snapshot) {
@@ -1866,7 +1883,6 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
     final firstDayOfMonth = DateTime(_currentMonth.year, _currentMonth.month, 1);
     final firstWeekday = firstDayOfMonth.weekday;
     final isDark = widget.isDarkMode;
-    
     return SingleChildScrollView(
       child: Column(
         children: [
@@ -1893,7 +1909,7 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
           GridView.builder(
             shrinkWrap: true,
             physics: NeverScrollableScrollPhysics(),
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 0),
             gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisCount: 7,
               childAspectRatio: 1.0,
@@ -1904,16 +1920,13 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
             itemBuilder: (context, index) {
               final dayOffset = index - (firstWeekday - 1);
               final day = dayOffset + 1;
-              
               if (day < 1 || day > daysInMonth) {
                 return Container(); // Empty space
               }
-              
               final dayTotal = dailyTotals[day] ?? 0.0;
               final isToday = day == DateTime.now().day && 
                              _currentMonth.month == DateTime.now().month && 
                              _currentMonth.year == DateTime.now().year;
-              
               return InkWell(
                 onTap: () {
                   setState(() {
@@ -1970,7 +1983,242 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
               );
             },
           ),
+          // Analysis selection container
+          if (_selectedDay == null)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
+              child: Container(
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  color: isDark ? AppColors.darkSurface : AppColors.lightSurface,
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.04),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                  border: Border.all(
+                    color: isDark ? AppColors.darkSurfaceLight : AppColors.lightSurfaceLight,
+                    width: 1.0,
+                  ),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(14.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(Icons.analytics, color: AppColors.primary, size: 20),
+                          const SizedBox(width: 8),
+                          Text('Analysis Options', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary)),
+                        ],
+                      ),
+                      const SizedBox(height: 10),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        children: [
+                          // First row: chips
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                            children: [
+                              ChoiceChip(
+                                label: const Text('Yearly'),
+                                selected: _analysisType == 'Yearly',
+                                selectedColor: AppColors.primary,
+                                labelStyle: TextStyle(
+                                  color: _analysisType == 'Yearly' ? Colors.white : (isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary),
+                                  fontWeight: FontWeight.w600,
+                                ),
+                                onSelected: (selected) {
+                                  setState(() {
+                                    _analysisType = 'Yearly';
+                                  });
+                                },
+                              ),
+                              ChoiceChip(
+                                label: const Text('Monthly'),
+                                selected: _analysisType == 'Monthly',
+                                selectedColor: AppColors.primary,
+                                labelStyle: TextStyle(
+                                  color: _analysisType == 'Monthly' ? Colors.white : (isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary),
+                                  fontWeight: FontWeight.w600,
+                                ),
+                                onSelected: (selected) {
+                                  setState(() {
+                                    _analysisType = 'Monthly';
+                                  });
+                                },
+                              ),
+                            ],
+                          ),
+                          // Second row: dropdowns
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                            children: [
+                              Text('Year:', style: TextStyle(fontSize: 13, color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary)),
+                              DropdownButton<int>(
+                                value: _selectedYear,
+                                items: _yearOptions.map((year) => DropdownMenuItem(
+                                  value: year,
+                                  child: Text(year.toString()),
+                                )).toList(),
+                                onChanged: (val) {
+                                  setState(() {
+                                    _selectedYear = val!;
+                                  });
+                                },
+                                style: TextStyle(fontSize: 13, color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary),
+                                dropdownColor: isDark ? AppColors.darkSurface : AppColors.lightSurface,
+                              ),
+                              if (_analysisType == 'Monthly') ...[
+                                Text('Month:', style: TextStyle(fontSize: 13, color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary)),
+                                DropdownButton<int>(
+                                  value: _selectedMonth,
+                                  items: _monthOptions.map((month) => DropdownMenuItem(
+                                    value: month,
+                                    child: Text(month.toString().padLeft(2, '0')),
+                                  )).toList(),
+                                  onChanged: (val) {
+                                    setState(() {
+                                      _selectedMonth = val!;
+                                    });
+                                  },
+                                  style: TextStyle(fontSize: 13, color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary),
+                                  dropdownColor: isDark ? AppColors.darkSurface : AppColors.lightSurface,
+                                ),
+                              ],
+                            ],
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          // Expenditure Analysis Chart (only show if no day is selected)
+          if (_selectedDay == null)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: Container(
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  color: isDark ? AppColors.darkSurface : AppColors.lightSurface,
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.04),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                  border: Border.all(
+                    color: isDark ? AppColors.darkSurfaceLight : AppColors.lightSurfaceLight,
+                    width: 1.0,
+                  ),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(18.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(Icons.pie_chart, color: AppColors.primary, size: 22),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Expenditure Analysis',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w700,
+                              color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      SizedBox(
+                        height: 180,
+                        child: _buildExpenditurePieChart(
+                          analysisType: _analysisType,
+                          year: _selectedYear,
+                          month: _selectedMonth,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
         ],
+      ),
+    );
+  }
+
+  // Helper to build the pie chart for expenditure analysis
+  Widget _buildExpenditurePieChart({required String analysisType, required int year, required int month}) {
+    List<Map<String, dynamic>> txs;
+    if (analysisType == 'Yearly') {
+      txs = _history.where((tx) {
+        final txDate = tx['timestamp'] as DateTime;
+        return txDate.year == year && tx['isDebited'] == true;
+      }).toList();
+    } else {
+      txs = _history.where((tx) {
+        final txDate = tx['timestamp'] as DateTime;
+        return txDate.year == year && txDate.month == month && tx['isDebited'] == true;
+      }).toList();
+    }
+    // Group by tag/category
+    final Map<String, double> categoryTotals = {};
+    for (final tx in txs) {
+      final tag = tx['tag'] ?? 'Other';
+      categoryTotals[tag] = (categoryTotals[tag] ?? 0) + (tx['amount'] as double);
+    }
+    final total = categoryTotals.values.fold(0.0, (a, b) => a + b);
+    if (categoryTotals.isEmpty || total == 0) {
+      return Center(
+        child: Text(
+          'No expenditure data for this period.',
+          style: TextStyle(fontSize: 13, color: Colors.grey),
+        ),
+      );
+    }
+    final List<PieChartSectionData> sections = [];
+    final colors = [
+      AppColors.food,
+      AppColors.utility,
+      AppColors.chill,
+      AppColors.transport,
+      AppColors.shopping,
+      AppColors.accent,
+      AppColors.primaryLight,
+      AppColors.secondaryLight,
+    ];
+    int colorIdx = 0;
+    categoryTotals.forEach((category, value) {
+      final percent = value / total * 100;
+      sections.add(PieChartSectionData(
+        color: colors[colorIdx % colors.length],
+        value: value,
+        title: '${category}\n${percent.toStringAsFixed(1)}%',
+        radius: 60,
+        titleStyle: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Colors.white),
+        titlePositionPercentageOffset: 0.6,
+      ));
+      colorIdx++;
+    });
+    return PieChart(
+      PieChartData(
+        sections: sections,
+        centerSpaceRadius: 32,
+        sectionsSpace: 2,
+        borderData: FlBorderData(show: false),
       ),
     );
   }
@@ -2202,21 +2450,21 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
                               SnackBar(content: Text('Transaction restored!')),
                             );
                           },
-                        ),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: AppColors.error.withOpacity(0.13),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Text(
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: AppColors.error.withOpacity(0.13),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
                             isDebited ? 'DEBITED' : 'CREDITED',
-                            style: TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w600,
-                              color: AppColors.error,
-                            ),
-                          ),
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.error,
+                        ),
+                      ),
                         ),
                       ],
                     ),
