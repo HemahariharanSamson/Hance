@@ -8,7 +8,7 @@ import 'dart:convert';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:fl_chart/fl_chart.dart';
 
-// Color System - Dual Tone Design (Zomato/Swiggy inspired)
+// Color System - Light Theme Design
 class AppColors {
   // Professional Fintech Palette
   static const Color primary = Color(0xFF2563eb); // Blue
@@ -25,24 +25,15 @@ class AppColors {
   static const Color secondaryLight = Color(0xFF6c757d); // Medium Grey
 
   // Backgrounds
-  static const Color darkBackground = Color(0xFF181a20); // Very dark
-  static const Color darkSurface = Color(0xFF23263a); // Card dark
-  static const Color darkSurfaceLight = Color(0xFF2d3142);
-  static const Color darkCardBackground = Color(0xFF23263a);
-
-  static const Color lightBackground = Color(0xFFf4f6fa); // Light grey
-  static const Color lightSurface = Color(0xFFffffff); // White
-  static const Color lightSurfaceLight = Color(0xFFe9ecef); // Very light grey
-  static const Color lightCardBackground = Color(0xFFffffff); // White
+  static const Color background = Color(0xFFf4f6fa); // Light grey
+  static const Color surface = Color(0xFFffffff); // White
+  static const Color surfaceLight = Color(0xFFe9ecef); // Very light grey
+  static const Color cardBackground = Color(0xFFffffff); // White
 
   // Text
-  static const Color darkTextPrimary = Color(0xFFf4f6fa); // Light
-  static const Color darkTextSecondary = Color(0xFFbfc8e6); // Muted
-  static const Color darkTextTertiary = Color(0xFF6c757d);
-
-  static const Color lightTextPrimary = Color(0xFF22223b); // Dark
-  static const Color lightTextSecondary = Color(0xFF6c757d); // Medium
-  static const Color lightTextTertiary = Color(0xFFadb5bd); // Light
+  static const Color textPrimary = Color(0xFF22223b); // Dark
+  static const Color textSecondary = Color(0xFF6c757d); // Medium
+  static const Color textTertiary = Color(0xFFadb5bd); // Light
 
   // Semantic
   static const Color success = Color(0xFF10b981); // Green
@@ -63,23 +54,13 @@ class AppColors {
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
   );
-  static const LinearGradient darkBackgroundGradient = LinearGradient(
-    colors: [darkBackground, darkSurface],
+  static const LinearGradient backgroundGradient = LinearGradient(
+    colors: [background, surface],
     begin: Alignment.topCenter,
     end: Alignment.bottomCenter,
   );
-  static const LinearGradient lightBackgroundGradient = LinearGradient(
-    colors: [lightBackground, lightSurface],
-    begin: Alignment.topCenter,
-    end: Alignment.bottomCenter,
-  );
-  static const LinearGradient darkCardGradient = LinearGradient(
-    colors: [darkCardBackground, darkSurfaceLight],
-    begin: Alignment.topLeft,
-    end: Alignment.bottomRight,
-  );
-  static const LinearGradient lightCardGradient = LinearGradient(
-    colors: [lightCardBackground, lightSurfaceLight],
+  static const LinearGradient cardGradient = LinearGradient(
+    colors: [cardBackground, surfaceLight],
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
   );
@@ -102,116 +83,17 @@ class MyApp extends StatefulWidget {
 }
 
 class _MyAppState extends State<MyApp> {
-  bool _isDarkMode = false;
-
-  void toggleTheme() {
-    setState(() {
-      _isDarkMode = !_isDarkMode;
-    });
-  }
-
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Hance',
-      theme: _isDarkMode ? _buildDarkTheme() : _buildLightTheme(),
-      home: MainScreen(
-        isDarkMode: _isDarkMode,
-        onThemeToggle: toggleTheme,
-      ),
+      theme: _buildLightTheme(),
+      home: const MainScreen(),
       debugShowCheckedModeBanner: false,
     );
   }
 
-  ThemeData _buildDarkTheme() {
-    return ThemeData(
-      brightness: Brightness.dark,
-      colorScheme: const ColorScheme.dark(
-        primary: AppColors.primary,
-        secondary: AppColors.secondary,
-        surface: AppColors.darkSurface,
-        background: AppColors.darkBackground,
-        error: AppColors.error,
-        onPrimary: AppColors.darkTextPrimary,
-        onSecondary: AppColors.darkTextPrimary,
-        onSurface: AppColors.darkTextPrimary,
-        onBackground: AppColors.darkTextPrimary,
-        onError: AppColors.darkTextPrimary,
-      ),
-      scaffoldBackgroundColor: AppColors.darkBackground,
-      appBarTheme: const AppBarTheme(
-        backgroundColor: AppColors.darkSurface,
-        foregroundColor: AppColors.darkTextPrimary,
-        elevation: 0,
-        centerTitle: true,
-        titleTextStyle: TextStyle(
-          fontSize: 20,
-          fontWeight: FontWeight.w600,
-          color: AppColors.darkTextPrimary,
-        ),
-      ),
-      cardTheme: const CardThemeData(
-        color: AppColors.darkCardBackground,
-        elevation: 8,
-        shadowColor: AppColors.primary,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.all(Radius.circular(16)),
-        ),
-      ),
-      bottomNavigationBarTheme: const BottomNavigationBarThemeData(
-        backgroundColor: AppColors.darkSurface,
-        selectedItemColor: AppColors.primary,
-        unselectedItemColor: AppColors.darkTextTertiary,
-        type: BottomNavigationBarType.fixed,
-        elevation: 8,
-      ),
-      floatingActionButtonTheme: const FloatingActionButtonThemeData(
-        backgroundColor: AppColors.primary,
-        foregroundColor: AppColors.darkTextPrimary,
-        elevation: 8,
-        shape: CircleBorder(),
-      ),
-      textTheme: const TextTheme(
-        headlineLarge: TextStyle(
-          fontSize: 32,
-          fontWeight: FontWeight.bold,
-          color: AppColors.darkTextPrimary,
-        ),
-        headlineMedium: TextStyle(
-          fontSize: 24,
-          fontWeight: FontWeight.w600,
-          color: AppColors.darkTextPrimary,
-        ),
-        titleLarge: TextStyle(
-          fontSize: 20,
-          fontWeight: FontWeight.w600,
-          color: AppColors.darkTextPrimary,
-        ),
-        titleMedium: TextStyle(
-          fontSize: 16,
-          fontWeight: FontWeight.w500,
-          color: AppColors.darkTextPrimary,
-        ),
-        bodyLarge: TextStyle(
-          fontSize: 16,
-          color: AppColors.darkTextSecondary,
-        ),
-        bodyMedium: TextStyle(
-          fontSize: 14,
-          color: AppColors.darkTextSecondary,
-        ),
-        labelLarge: TextStyle(
-          fontSize: 14,
-          fontWeight: FontWeight.w500,
-          color: AppColors.darkTextPrimary,
-        ),
-      ),
-      iconTheme: const IconThemeData(
-        color: AppColors.darkTextSecondary,
-        size: 24,
-      ),
-    );
-  }
+
 
   ThemeData _buildLightTheme() {
     return ThemeData(
@@ -219,29 +101,29 @@ class _MyAppState extends State<MyApp> {
       colorScheme: const ColorScheme.light(
         primary: AppColors.primary,
         secondary: AppColors.secondary,
-        surface: AppColors.lightSurface,
-        background: AppColors.lightBackground,
+        surface: AppColors.surface,
+        background: AppColors.background,
         error: AppColors.error,
-        onPrimary: AppColors.lightTextPrimary,
-        onSecondary: AppColors.lightTextPrimary,
-        onSurface: AppColors.lightTextPrimary,
-        onBackground: AppColors.lightTextPrimary,
-        onError: AppColors.lightTextPrimary,
+        onPrimary: AppColors.textPrimary,
+        onSecondary: AppColors.textPrimary,
+        onSurface: AppColors.textPrimary,
+        onBackground: AppColors.textPrimary,
+        onError: AppColors.textPrimary,
       ),
-      scaffoldBackgroundColor: AppColors.lightBackground,
+      scaffoldBackgroundColor: AppColors.background,
       appBarTheme: const AppBarTheme(
-        backgroundColor: AppColors.lightSurface,
-        foregroundColor: AppColors.lightTextPrimary,
+        backgroundColor: AppColors.surface,
+        foregroundColor: AppColors.textPrimary,
         elevation: 0,
         centerTitle: true,
         titleTextStyle: TextStyle(
           fontSize: 20,
           fontWeight: FontWeight.w600,
-          color: AppColors.lightTextPrimary,
+          color: AppColors.textPrimary,
         ),
       ),
       cardTheme: const CardThemeData(
-        color: AppColors.lightCardBackground,
+        color: AppColors.cardBackground,
         elevation: 8,
         shadowColor: AppColors.primary,
         shape: RoundedRectangleBorder(
@@ -249,15 +131,15 @@ class _MyAppState extends State<MyApp> {
         ),
       ),
       bottomNavigationBarTheme: const BottomNavigationBarThemeData(
-        backgroundColor: AppColors.lightSurface,
+        backgroundColor: AppColors.surface,
         selectedItemColor: AppColors.primary,
-        unselectedItemColor: AppColors.lightTextTertiary,
+        unselectedItemColor: AppColors.textTertiary,
         type: BottomNavigationBarType.fixed,
         elevation: 8,
       ),
       floatingActionButtonTheme: const FloatingActionButtonThemeData(
         backgroundColor: AppColors.primary,
-        foregroundColor: AppColors.lightTextPrimary,
+        foregroundColor: AppColors.textPrimary,
         elevation: 8,
         shape: CircleBorder(),
       ),
@@ -265,39 +147,39 @@ class _MyAppState extends State<MyApp> {
         headlineLarge: TextStyle(
           fontSize: 32,
           fontWeight: FontWeight.bold,
-          color: AppColors.lightTextPrimary,
+          color: AppColors.textPrimary,
         ),
         headlineMedium: TextStyle(
           fontSize: 24,
           fontWeight: FontWeight.w600,
-          color: AppColors.lightTextPrimary,
+          color: AppColors.textPrimary,
         ),
         titleLarge: TextStyle(
           fontSize: 20,
           fontWeight: FontWeight.w600,
-          color: AppColors.lightTextPrimary,
+          color: AppColors.textPrimary,
         ),
         titleMedium: TextStyle(
           fontSize: 16,
           fontWeight: FontWeight.w500,
-          color: AppColors.lightTextPrimary,
+          color: AppColors.textPrimary,
         ),
         bodyLarge: TextStyle(
           fontSize: 16,
-          color: AppColors.lightTextSecondary,
+          color: AppColors.textSecondary,
         ),
         bodyMedium: TextStyle(
           fontSize: 14,
-          color: AppColors.lightTextSecondary,
+          color: AppColors.textSecondary,
         ),
         labelLarge: TextStyle(
           fontSize: 14,
           fontWeight: FontWeight.w500,
-          color: AppColors.lightTextPrimary,
+          color: AppColors.textPrimary,
         ),
       ),
       iconTheme: const IconThemeData(
-        color: AppColors.lightTextSecondary,
+        color: AppColors.textSecondary,
         size: 24,
       ),
     );
@@ -305,10 +187,7 @@ class _MyAppState extends State<MyApp> {
 }
 
 class MainScreen extends StatefulWidget {
-  const MainScreen({super.key, required this.isDarkMode, required this.onThemeToggle});
-
-  final bool isDarkMode;
-  final VoidCallback onThemeToggle;
+  const MainScreen({super.key});
 
   @override
   State<MainScreen> createState() => _MainScreenState();
@@ -328,6 +207,9 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
   Set<int> _expandedCards = {};
   Set<int> _expandedDeletedCards = {};
   Set<int> _expandedCalendarCards = {};
+  
+  // Track which deleted transaction groups are expanded
+  Set<String> _expandedDeletedGroups = {};
   
   // Loading state
   bool _isLoading = true;
@@ -351,6 +233,14 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
   String _analysisType = 'Monthly'; // or 'Yearly'
   int _selectedYear = DateTime.now().year;
   int _selectedMonth = DateTime.now().month;
+  
+  // News state
+  List<Map<String, String>>? _newsData;
+  bool _isLoadingNews = true;
+  bool _isRefreshingNews = false;
+  
+  // Transactions refresh state
+  bool _isRefreshingTransactions = false;
   List<int> get _yearOptions {
     // Always show a range from earliest year in data to current year
     int minYear = DateTime.now().year;
@@ -391,6 +281,7 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
     
     _initStorage();
     _loadData();
+    await _loadNews(); // Load news once during initialization
     
     setState(() {
       _loadingMessage = 'Scanning SMS messages...';
@@ -753,13 +644,12 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
 
   Widget _transactionCard(Map<String, dynamic> tx) {
     final isExpanded = _expandedCards.contains(tx['id']);
-    final isDark = widget.isDarkMode;
     final isDebited = tx['isDebited'] == true;
     final isCredited = !isDebited;
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 6, horizontal: 16),
       decoration: BoxDecoration(
-        color: isDark ? AppColors.darkCardBackground : AppColors.lightCardBackground,
+        color: AppColors.cardBackground,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color: isDebited 
@@ -829,14 +719,12 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
                         Container(
                           padding: const EdgeInsets.all(6),
                           decoration: BoxDecoration(
-                            color: isDark 
-                                ? AppColors.darkSurfaceLight.withOpacity(0.3)
-                                : AppColors.lightSurfaceLight.withOpacity(0.5),
+                            color: AppColors.surfaceLight.withOpacity(0.5),
                             borderRadius: BorderRadius.circular(6),
                           ),
                           child: Icon(
                             isExpanded ? Icons.expand_less : Icons.expand_more,
-                            color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
+                            color: AppColors.textSecondary,
                             size: 18,
                           ),
                         ),
@@ -849,9 +737,7 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
                   Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: isDark 
-                          ? AppColors.darkSurfaceLight.withOpacity(0.3)
-                          : AppColors.lightSurfaceLight.withOpacity(0.5),
+                      color: AppColors.surfaceLight.withOpacity(0.5),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Column(
@@ -904,7 +790,6 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
   }
 
   Widget _modernTransactionCard(Map<String, dynamic> tx, {bool showActions = true}) {
-    final isDark = widget.isDarkMode;
     final isDebited = tx['isDebited'] == true;
     final isCredited = !isDebited;
     final tag = tx['tag'] as String?;
@@ -912,11 +797,11 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 6, horizontal: 20),
       decoration: BoxDecoration(
-        color: isDark ? AppColors.darkCardBackground : AppColors.lightCardBackground,
+        color: AppColors.cardBackground,
         borderRadius: BorderRadius.circular(18),
         boxShadow: [
           BoxShadow(
-            color: isDark ? Colors.black.withOpacity(0.10) : Colors.grey.withOpacity(0.07),
+            color: Colors.grey.withOpacity(0.07),
             blurRadius: 16,
             offset: const Offset(0, 4),
           ),
@@ -955,14 +840,14 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
                         ),
                       ),
                       const SizedBox(height: 2),
-                      Text(
-                        tx['merchant'] ?? 'Unknown',
-                        style: TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w500,
-                          color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
-                        ),
-                      ),
+                                                Text(
+                            tx['merchant'] ?? 'Unknown',
+                            style: TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w500,
+                              color: AppColors.textSecondary,
+                            ),
+                          ),
                     ],
                   ),
                 ),
@@ -1097,13 +982,11 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
   }
 
   Widget _buildTransactionDetail(String fromAccount, String toAccount) {
-    final isDark = widget.isDarkMode;
-    
     return Row(
       children: [
         Icon(
           Icons.swap_horiz,
-          color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+          color: AppColors.textPrimary,
           size: 16,
         ),
         const SizedBox(width: 8),
@@ -1112,7 +995,7 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
             '$fromAccount → $toAccount',
             style: TextStyle(
               fontSize: 12,
-              color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
+              color: AppColors.textSecondary,
               fontWeight: FontWeight.w600,
             ),
           ),
@@ -1122,13 +1005,11 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
   }
 
   Widget _buildDetailRow(String label, String value, IconData icon) {
-    final isDark = widget.isDarkMode;
-    
     return Row(
       children: [
         Icon(
           icon,
-          color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+          color: AppColors.textPrimary,
           size: 16,
         ),
         const SizedBox(width: 8),
@@ -1138,7 +1019,7 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
             label,
             style: TextStyle(
               fontSize: 12,
-              color: isDark ? AppColors.darkTextTertiary : AppColors.lightTextTertiary,
+              color: AppColors.textTertiary,
               fontWeight: FontWeight.w500,
             ),
           ),
@@ -1148,7 +1029,7 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
             value,
             style: TextStyle(
               fontSize: 12,
-              color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
+              color: AppColors.textSecondary,
               fontWeight: FontWeight.w600,
             ),
           ),
@@ -1244,14 +1125,14 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
                 Icon(
                   Icons.receipt_long_outlined,
                   size: 64,
-                  color: widget.isDarkMode ? AppColors.darkTextTertiary : AppColors.lightTextTertiary,
+                  color: AppColors.textTertiary,
                 ),
                 const SizedBox(height: 8),
                 Text(
                   'No new transactions.',
                   style: TextStyle(
                     fontSize: 18,
-                    color: widget.isDarkMode ? AppColors.darkTextTertiary : AppColors.lightTextTertiary,
+                    color: AppColors.textTertiary,
                   ),
                 ),
               ],
@@ -1260,8 +1141,23 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
         }
         return RefreshIndicator(
           onRefresh: () async {
-            await _scanTodaySms();
-            setState(() {});
+            setState(() {
+              _isRefreshingTransactions = true;
+            });
+            
+            // Start both operations concurrently
+            final scanFuture = _scanTodaySms();
+            final newsFuture = _loadNews(isRefreshing: true);
+            
+            // Wait for both to complete
+            await Future.wait([scanFuture, newsFuture]);
+            
+            // Ensure minimum animation duration for better UX
+            await Future.delayed(const Duration(milliseconds: 800));
+            
+            setState(() {
+              _isRefreshingTransactions = false;
+            });
           },
           child: SafeArea(
             top: false,
@@ -1276,100 +1172,128 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
                     style: TextStyle(
                       fontSize: 16, // Reduced from 22
                       fontWeight: FontWeight.w600, // Slightly less bold
-                      color: widget.isDarkMode ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+                      color: AppColors.textPrimary,
                       letterSpacing: 0.2,
                     ),
                   ),
                 ),
-                SizedBox(
-                  height: 320, // Adjust as needed for card height
-                  child: AnimatedBuilder(
-                    animation: _shakeController,
-                    builder: (context, child) {
-                      final offset = _shakeController.isAnimating ? _shakeAnimation.value * (1 - 2 * (_shakeController.value % 0.5).floor()) : 0.0;
-                      return Transform.translate(
-                        offset: Offset(offset, 0),
-                        child: CardSwiper(
-                          key: ValueKey(_transactions.length),
-                          cardsCount: _transactions.length,
-                          numberOfCardsDisplayed: _transactions.length.clamp(1, 2),
-                          isLoop: false,
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 1),
-                          allowedSwipeDirection: const AllowedSwipeDirection.only(
-                            left: true,
-                            right: true,
-                            up: false,
-                            down: false,
-                          ),
-                          cardBuilder: (context, index, percentThresholdX, percentThresholdY) {
-                            final tx = _transactions[index];
-                            return _modernTransactionCard(tx);
-                          },
-                          onSwipe: (index, direction, CardSwiperDirection? swipeDirection) async {
-                            // Check if index is still valid after potential previous deletions
-                            if (index >= _transactions.length) {
-                              return false;
-                            }
-                            final tx = _transactions[index];
-                            final selected = _selectedAction[tx['id']];
-                            if (swipeDirection == CardSwiperDirection.left) {
-                              // Left swipe: require category selection
-                              if (selected == null || selected == 'Delete') {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(content: Text('Please select a category before swiping left!')),
-                                );
-                                _shakeController.forward(from: 0);
-                                return false;
-                              } else {
-                                _tagTransaction(tx['id'], selected);
-                                setState(() {
-                                  _selectedAction[tx['id']] = null;
-                                });
-                                return true;
-                              }
-                            } else if (swipeDirection == CardSwiperDirection.right) {
-                              // Right swipe: ask for confirmation
-                              final confirmed = await showDialog<bool>(
-                                context: context,
-                                builder: (context) => AlertDialog(
-                                  title: const Text('Delete Transaction'),
-                                  content: Text('Are you sure you want to delete this transaction for ₹${tx['amount'].toStringAsFixed(2)}?'),
-                                  actions: [
-                                    TextButton(
-                                      onPressed: () => Navigator.of(context).pop(false),
-                                      child: const Text('No'),
-                                    ),
-                                    TextButton(
-                                      onPressed: () => Navigator.of(context).pop(true),
-                                      child: const Text('Yes'),
-                                    ),
-                                  ],
+                _isRefreshingTransactions
+                    ? Container(
+                        height: 320,
+                        child: Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              SizedBox(
+                                width: 40,
+                                height: 40,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 3,
+                                  valueColor: AlwaysStoppedAnimation(AppColors.primary),
                                 ),
-                              );
-                              if (confirmed == true) {
-                                _cancelTransaction(tx['id']);
-                                setState(() {
-                                  _selectedAction[tx['id']] = null;
-                                });
-                                return true; // allow swipe
-                              } else {
-                                _shakeController.forward(from: 0);
-                                return false; // prevent swipe
-                              }
-                            }
-                            return true;
+                              ),
+                              const SizedBox(height: 16),
+                              Text(
+                                'Refreshing transactions...',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  color: AppColors.textSecondary,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      )
+                    : SizedBox(
+                        height: 320, // Adjust as needed for card height
+                        child: AnimatedBuilder(
+                          animation: _shakeController,
+                          builder: (context, child) {
+                            final offset = _shakeController.isAnimating ? _shakeAnimation.value * (1 - 2 * (_shakeController.value % 0.5).floor()) : 0.0;
+                            return Transform.translate(
+                              offset: Offset(offset, 0),
+                              child: CardSwiper(
+                                key: ValueKey(_transactions.length),
+                                cardsCount: _transactions.length,
+                                numberOfCardsDisplayed: _transactions.length.clamp(1, 2),
+                                isLoop: false,
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 1),
+                                allowedSwipeDirection: const AllowedSwipeDirection.only(
+                                  left: true,
+                                  right: true,
+                                  up: false,
+                                  down: false,
+                                ),
+                                cardBuilder: (context, index, percentThresholdX, percentThresholdY) {
+                                  final tx = _transactions[index];
+                                  return _modernTransactionCard(tx);
+                                },
+                                onSwipe: (index, direction, CardSwiperDirection? swipeDirection) async {
+                                  // Check if index is still valid after potential previous deletions
+                                  if (index >= _transactions.length) {
+                                    return false;
+                                  }
+                                  final tx = _transactions[index];
+                                  final selected = _selectedAction[tx['id']];
+                                  if (swipeDirection == CardSwiperDirection.left) {
+                                    // Left swipe: require category selection
+                                    if (selected == null || selected == 'Delete') {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        const SnackBar(content: Text('Please select a category before swiping left!')),
+                                      );
+                                      _shakeController.forward(from: 0);
+                                      return false;
+                                    } else {
+                                      _tagTransaction(tx['id'], selected);
+                                      setState(() {
+                                        _selectedAction[tx['id']] = null;
+                                      });
+                                      return true;
+                                    }
+                                  } else if (swipeDirection == CardSwiperDirection.right) {
+                                    // Right swipe: ask for confirmation
+                                    final confirmed = await showDialog<bool>(
+                                      context: context,
+                                      builder: (context) => AlertDialog(
+                                        title: const Text('Delete Transaction'),
+                                        content: Text('Are you sure you want to delete this transaction for ₹${tx['amount'].toStringAsFixed(2)}?'),
+                                        actions: [
+                                          TextButton(
+                                            onPressed: () => Navigator.of(context).pop(false),
+                                            child: const Text('No'),
+                                          ),
+                                          TextButton(
+                                            onPressed: () => Navigator.of(context).pop(true),
+                                            child: const Text('Yes'),
+                                          ),
+                                        ],
+                                      ),
+                                    );
+                                    if (confirmed == true) {
+                                      _cancelTransaction(tx['id']);
+                                      setState(() {
+                                        _selectedAction[tx['id']] = null;
+                                      });
+                                      return true; // allow swipe
+                                    } else {
+                                      _shakeController.forward(from: 0);
+                                      return false; // prevent swipe
+                                    }
+                                  }
+                                  return true;
+                                },
+                              ),
+                            );
                           },
                         ),
-                      );
-                    },
-                  ),
-                ),
+                      ),
                 // News Container (now below cards)
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 20, vertical:30),
                   child: Container(
                     decoration: BoxDecoration(
-                      color: widget.isDarkMode ? AppColors.darkSurface : AppColors.lightSurface,
+                      color: AppColors.surface,
                       borderRadius: BorderRadius.circular(12),
                       boxShadow: [
                         BoxShadow(
@@ -1379,7 +1303,7 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
                         ),
                       ],
                       border: Border.all(
-                        color: widget.isDarkMode ? AppColors.darkSurfaceLight : AppColors.lightSurfaceLight,
+                        color: AppColors.surfaceLight,
                         width: 1.0,
                       ),
                     ),
@@ -1397,17 +1321,14 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
                                 style: TextStyle(
                                   fontSize: 15,
                                   fontWeight: FontWeight.w700,
-                                  color: widget.isDarkMode ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+                                  color: AppColors.textPrimary,
                                 ),
                               ),
                             ],
                 ),
                 const SizedBox(height: 8),
-                          FutureBuilder<List<Map<String, String>>>(
-                            future: _fetchFinanceNews(),
-                            builder: (context, snapshot) {
-                              if (snapshot.connectionState == ConnectionState.waiting) {
-                                return Row(
+                          _isLoadingNews || _isRefreshingNews
+                              ? Row(
                                   children: [
                                     SizedBox(
                                       width: 18,
@@ -1415,57 +1336,54 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
                                       child: CircularProgressIndicator(strokeWidth: 2, valueColor: AlwaysStoppedAnimation(AppColors.primary)),
                                     ),
                                     const SizedBox(width: 10),
-                                    Text('Fetching latest news...', style: TextStyle(fontSize: 13, color: widget.isDarkMode ? AppColors.darkTextSecondary : AppColors.lightTextSecondary)),
+                                    Text(
+                                      _isRefreshingNews ? 'Refreshing news...' : 'Fetching latest news...', 
+                                      style: TextStyle(fontSize: 13, color: AppColors.textSecondary)
+                                    ),
                                   ],
-                                );
-                              } else if (snapshot.hasError) {
-                                return Text('Failed to load news.', style: TextStyle(fontSize: 13, color: AppColors.error));
-                              } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                                return Text('No news available.', style: TextStyle(fontSize: 13, color: widget.isDarkMode ? AppColors.darkTextTertiary : AppColors.lightTextTertiary));
-                              }
-                              final newsList = snapshot.data!;
-                              return Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: newsList.take(4).map((news) => Padding(
-                                  padding: const EdgeInsets.only(bottom: 6.0),
-                                  child: Row(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Padding(
-                                        padding: const EdgeInsets.only(top: 4.0),
-                                        child: Icon(Icons.circle, size: 7, color: AppColors.primary),
-                                      ),
-                                      const SizedBox(width: 7),
-                                      Expanded(
-                                        child: InkWell(
-                                          onTap: () async {
-                                            final url = news['url']!;
-                                            try {
-                                              await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
-                                            } catch (e) {
-                                              ScaffoldMessenger.of(context).showSnackBar(
-                                                SnackBar(content: Text('Could not open the link.')),
-                                              );
-                                            }
-                                          },
-                                          child: Text(
-                                            news['title']!,
-                                            style: TextStyle(
-                                              fontSize: 13.5,
-                                              color: Colors.blue,
-                                              fontWeight: FontWeight.w500,
-                                              height: 1.3,
-                                              decoration: TextDecoration.underline,
+                                )
+                              : _newsData == null || _newsData!.isEmpty
+                                  ? Text('No news available.', style: TextStyle(fontSize: 13, color: AppColors.textTertiary))
+                                  : Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: _newsData!.take(4).map((news) => Padding(
+                                        padding: const EdgeInsets.only(bottom: 6.0),
+                                        child: Row(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Padding(
+                                              padding: const EdgeInsets.only(top: 4.0),
+                                              child: Icon(Icons.circle, size: 7, color: AppColors.primary),
                                             ),
-                                          ),
+                                            const SizedBox(width: 7),
+                                            Expanded(
+                                              child: InkWell(
+                                                onTap: () async {
+                                                  final url = news['url']!;
+                                                  try {
+                                                    await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+                                                  } catch (e) {
+                                                    ScaffoldMessenger.of(context).showSnackBar(
+                                                      SnackBar(content: Text('Could not open the link.')),
+                                                    );
+                                                  }
+                                                },
+                                                child: Text(
+                                                  news['title']!,
+                                                  style: TextStyle(
+                                                    fontSize: 13.5,
+                                                    color: Colors.blue,
+                                                    fontWeight: FontWeight.w500,
+                                                    height: 1.3,
+                                                    decoration: TextDecoration.underline,
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
+                                          ],
                                         ),
-                                      ),
-                                    ],
-                                  ),
-                                )).toList(),
-                              );
-                            },
-                          ),
+                                      )).toList(),
+                                                                         ),
                         ],
                       ),
                     ),
@@ -1487,14 +1405,14 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
                 Icon(
                   Icons.delete_outline,
                   size: 64,
-                  color: widget.isDarkMode ? AppColors.darkTextTertiary : AppColors.lightTextTertiary,
+                  color: AppColors.textTertiary,
                 ),
                 const SizedBox(height: 8),
                 Text(
                   'No cancelled transactions.',
                   style: TextStyle(
                     fontSize: 18,
-                    color: widget.isDarkMode ? AppColors.darkTextTertiary : AppColors.lightTextTertiary,
+                    color: AppColors.textTertiary,
                   ),
                 ),
               ],
@@ -1519,7 +1437,7 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
                     style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w700,
-                      color: widget.isDarkMode ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+                      color: AppColors.textPrimary,
                       letterSpacing: 0.5,
                     ),
                   ),
@@ -1536,10 +1454,8 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
   }
 
   Widget _buildSplashScreen() {
-    final isDark = widget.isDarkMode;
-    
     return Container(
-      color: isDark ? AppColors.darkBackground : AppColors.lightBackground,
+      color: AppColors.background,
       child: SafeArea(
         child: Center(
           child: Column(
@@ -1584,7 +1500,7 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
                 _loadingMessage,
                 style: TextStyle(
                   fontSize: 15,
-                  color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
+                  color: AppColors.textSecondary,
                   fontWeight: FontWeight.w500,
                   letterSpacing: 0.2,
                 ),
@@ -1595,7 +1511,7 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
                 'Your SMS transactions are safe and private.',
                 style: TextStyle(
                   fontSize: 13,
-                  color: isDark ? AppColors.darkTextTertiary : AppColors.lightTextTertiary,
+                  color: AppColors.textTertiary,
                   fontWeight: FontWeight.w400,
                   fontStyle: FontStyle.italic,
                   letterSpacing: 0.1,
@@ -1619,31 +1535,14 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
             fontSize: 24,
             fontWeight: FontWeight.w700,
             letterSpacing: 1.2,
-            color: widget.isDarkMode ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+            color: AppColors.textPrimary,
             fontFamily: 'Roboto',
           ),
         ),
         centerTitle: false,
         elevation: 0,
-        backgroundColor: widget.isDarkMode ? AppColors.darkSurface : AppColors.lightSurface,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            tooltip: 'Reload',
-            onPressed: () {
-              _loadData();
-              setState(() {});
-            },
-          ),
-          IconButton(
-            icon: Icon(
-              widget.isDarkMode ? Icons.light_mode_outlined : Icons.dark_mode_outlined,
-              color: widget.isDarkMode ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
-            ),
-            onPressed: widget.onThemeToggle,
-            tooltip: widget.isDarkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode',
-          ),
-        ],
+        backgroundColor: AppColors.surface,
+
       ),
       body: SafeArea(
         top: false,
@@ -1653,7 +1552,7 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
       bottomNavigationBar: _isLoading ? null : BottomAppBar(
         height: 70, // Increased from 60 to 70
         padding: EdgeInsets.zero,
-        color: widget.isDarkMode ? AppColors.darkSurface : AppColors.lightSurface,
+        color: AppColors.surface,
         elevation: 8,
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8), // Increased vertical padding
@@ -1692,7 +1591,7 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
     required bool isSelected,
   }) {
     final selectedColor = AppColors.primary;
-    final unselectedColor = widget.isDarkMode ? AppColors.darkTextTertiary : AppColors.lightTextTertiary;
+    final unselectedColor = AppColors.textTertiary;
     
     return Expanded(
       child: InkWell(
@@ -1779,20 +1678,20 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
     final monthTransactions = _getTransactionsForMonth(_currentMonth);
     final dailyTotals = _getDailyTotalsForMonth(_currentMonth);
     final monthTotal = _getTotalForMonth(_currentMonth);
-    final isDark = widget.isDarkMode;
+    final isDark = false; // Always false since we removed dark mode
     
     return Container(
-      color: isDark ? AppColors.darkBackground : AppColors.lightBackground,
+      color: AppColors.background,
       child: Column(
         children: [
           // Month navigation header
           Container(
             padding: const EdgeInsets.fromLTRB(20, 24, 20, 8),
             decoration: BoxDecoration(
-              color: isDark ? AppColors.darkSurface : AppColors.lightSurface,
+              color: AppColors.surface,
               border: Border(
                 bottom: BorderSide(
-                  color: isDark ? AppColors.darkSurfaceLight : AppColors.lightSurfaceLight,
+                  color: AppColors.surfaceLight,
                   width: 1,
                 ),
               ),
@@ -1816,7 +1715,7 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
                       style: TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
-                        color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+                        color: AppColors.textPrimary,
                         letterSpacing: 0.5,
                       ),
                     ),
@@ -1856,13 +1755,9 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
     required IconData icon,
     required VoidCallback onPressed,
   }) {
-    final isDark = widget.isDarkMode;
-    
     return Container(
       decoration: BoxDecoration(
-        color: isDark 
-            ? AppColors.darkSurfaceLight.withOpacity(0.3)
-            : AppColors.lightSurfaceLight.withOpacity(0.5),
+        color: AppColors.surfaceLight.withOpacity(0.5),
         borderRadius: BorderRadius.circular(8),
       ),
       child: IconButton(
@@ -1882,7 +1777,6 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
     final daysInMonth = DateTime(_currentMonth.year, _currentMonth.month + 1, 0).day;
     final firstDayOfMonth = DateTime(_currentMonth.year, _currentMonth.month, 1);
     final firstWeekday = firstDayOfMonth.weekday;
-    final isDark = widget.isDarkMode;
     return SingleChildScrollView(
       child: Column(
         children: [
@@ -1897,7 +1791,7 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
                           textAlign: TextAlign.center,
                           style: TextStyle(
                             fontWeight: FontWeight.w600,
-                            color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
+                            color: AppColors.textSecondary,
                             fontSize: 11,
                           ),
                         ),
@@ -1938,9 +1832,7 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
                   decoration: BoxDecoration(
                     color: dayTotal > 0 
                         ? AppColors.primary.withOpacity(0.1)
-                        : (isDark 
-                            ? AppColors.darkSurfaceLight.withOpacity(0.2)
-                            : AppColors.lightSurfaceLight.withOpacity(0.3)),
+                        : AppColors.surfaceLight.withOpacity(0.3),
                     borderRadius: BorderRadius.circular(6),
                     border: isToday 
                         ? Border.all(color: AppColors.primary, width: 2)
@@ -1956,7 +1848,7 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
                           fontWeight: FontWeight.w600,
                           color: isToday 
                               ? AppColors.primary 
-                              : (isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary),
+                              : AppColors.textPrimary,
                         ),
                       ),
                       if (dayTotal > 0) ...[
@@ -1990,7 +1882,7 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
               child: Container(
                 width: double.infinity,
                 decoration: BoxDecoration(
-                  color: isDark ? AppColors.darkSurface : AppColors.lightSurface,
+                  color: AppColors.surface,
                   borderRadius: BorderRadius.circular(16),
                   boxShadow: [
                     BoxShadow(
@@ -2000,7 +1892,7 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
                     ),
                   ],
                   border: Border.all(
-                    color: isDark ? AppColors.darkSurfaceLight : AppColors.lightSurfaceLight,
+                    color: AppColors.surfaceLight,
                     width: 1.0,
                   ),
                 ),
@@ -2013,7 +1905,7 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
                         children: [
                           Icon(Icons.analytics, color: AppColors.primary, size: 20),
                           const SizedBox(width: 8),
-                          Text('Analysis Options', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary)),
+                          Text('Analysis Options', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
                         ],
                       ),
                       const SizedBox(height: 10),
@@ -2031,7 +1923,7 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
                                 selected: _analysisType == 'Yearly',
                                 selectedColor: AppColors.primary,
                                 labelStyle: TextStyle(
-                                  color: _analysisType == 'Yearly' ? Colors.white : (isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary),
+                                  color: _analysisType == 'Yearly' ? Colors.white : AppColors.textPrimary,
                                   fontWeight: FontWeight.w600,
                                 ),
                                 onSelected: (selected) {
@@ -2045,7 +1937,7 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
                                 selected: _analysisType == 'Monthly',
                                 selectedColor: AppColors.primary,
                                 labelStyle: TextStyle(
-                                  color: _analysisType == 'Monthly' ? Colors.white : (isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary),
+                                  color: _analysisType == 'Monthly' ? Colors.white : AppColors.textPrimary,
                                   fontWeight: FontWeight.w600,
                                 ),
                                 onSelected: (selected) {
@@ -2060,7 +1952,7 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                             children: [
-                              Text('Year:', style: TextStyle(fontSize: 13, color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary)),
+                              Text('Year:', style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
                               DropdownButton<int>(
                                 value: _selectedYear,
                                 items: _yearOptions.map((year) => DropdownMenuItem(
@@ -2072,11 +1964,11 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
                                     _selectedYear = val!;
                                   });
                                 },
-                                style: TextStyle(fontSize: 13, color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary),
-                                dropdownColor: isDark ? AppColors.darkSurface : AppColors.lightSurface,
+                                style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
+                                dropdownColor: AppColors.surface,
                               ),
                               if (_analysisType == 'Monthly') ...[
-                                Text('Month:', style: TextStyle(fontSize: 13, color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary)),
+                                Text('Month:', style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
                                 DropdownButton<int>(
                                   value: _selectedMonth,
                                   items: _monthOptions.map((month) => DropdownMenuItem(
@@ -2088,8 +1980,8 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
                                       _selectedMonth = val!;
                                     });
                                   },
-                                  style: TextStyle(fontSize: 13, color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary),
-                                  dropdownColor: isDark ? AppColors.darkSurface : AppColors.lightSurface,
+                                  style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
+                                  dropdownColor: AppColors.surface, // light only
                                 ),
                               ],
                             ],
@@ -2108,7 +2000,7 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
               child: Container(
                 width: double.infinity,
                 decoration: BoxDecoration(
-                  color: isDark ? AppColors.darkSurface : AppColors.lightSurface,
+                  color: AppColors.surface,
                   borderRadius: BorderRadius.circular(16),
                   boxShadow: [
                     BoxShadow(
@@ -2118,7 +2010,7 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
                     ),
                   ],
                   border: Border.all(
-                    color: isDark ? AppColors.darkSurfaceLight : AppColors.lightSurfaceLight,
+                    color: AppColors.surfaceLight,
                     width: 1.0,
                   ),
                 ),
@@ -2136,7 +2028,7 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
                             style: TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.w700,
-                              color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+                              color: AppColors.textPrimary,
                             ),
                           ),
                         ],
@@ -2226,20 +2118,19 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
   Widget _buildDayDetails(DateTime day) {
     final dayTransactions = _getTransactionsForDay(day);
     final dayTotal = _getTotalForDay(day);
-    final isDark = widget.isDarkMode;
     
     return Container(
-      color: isDark ? AppColors.darkBackground : AppColors.lightBackground,
+      color: AppColors.surface,
       child: Column(
         children: [
           // Day header
           Container(
             padding: const EdgeInsets.fromLTRB(20, 24, 20, 8),
             decoration: BoxDecoration(
-              color: isDark ? AppColors.darkSurface : AppColors.lightSurface,
+              color: AppColors.surface,
               border: Border(
                 bottom: BorderSide(
-                  color: isDark ? AppColors.darkSurfaceLight : AppColors.lightSurfaceLight,
+                  color: AppColors.surfaceLight,
                   width: 1,
                 ),
               ),
@@ -2261,7 +2152,7 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
-                      color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+                      color: AppColors.textPrimary,
                       letterSpacing: 0.5,
                     ),
                   ),
@@ -2298,14 +2189,14 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
                           Icon(
                             Icons.receipt_long_outlined,
                             size: 48,
-                            color: isDark ? AppColors.darkTextTertiary : AppColors.lightTextTertiary,
+                            color: AppColors.textTertiary,
                           ),
                           const SizedBox(height: 12),
                           Text(
                             'No transactions for this day',
                             style: TextStyle(
                               fontSize: 14,
-                              color: isDark ? AppColors.darkTextTertiary : AppColors.lightTextTertiary,
+                              color: AppColors.textTertiary,
                               fontWeight: FontWeight.w500,
                             ),
                           ),
@@ -2322,7 +2213,7 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
                             style: TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.w700,
-                              color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+                              color: AppColors.textPrimary,
                               letterSpacing: 0.5,
                             ),
                           ),
@@ -2347,7 +2238,7 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
       case 'Chill':
         return AppColors.chill;
       default:
-        return widget.isDarkMode ? AppColors.darkTextTertiary : AppColors.lightTextTertiary;
+        return AppColors.textTertiary;
     }
   }
 
@@ -2359,19 +2250,65 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
     return months[month - 1];
   }
 
+  // Group deleted transactions by month and day
+  Map<String, Map<String, List<Map<String, dynamic>>>> _getGroupedDeletedTransactions() {
+    final grouped = <String, Map<String, List<Map<String, dynamic>>>>{};
+    
+    for (final tx in _cancelledTransactions) {
+      final date = tx['timestamp'] as DateTime;
+      final monthKey = '${date.year}-${date.month.toString().padLeft(2, '0')}';
+      final dayKey = '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+      
+      if (!grouped.containsKey(monthKey)) {
+        grouped[monthKey] = {};
+      }
+      if (!grouped[monthKey]!.containsKey(dayKey)) {
+        grouped[monthKey]![dayKey] = [];
+      }
+      grouped[monthKey]![dayKey]!.add(tx);
+    }
+    
+    return grouped;
+  }
+
+  String _getMonthDisplayName(String monthKey) {
+    final parts = monthKey.split('-');
+    final year = int.parse(parts[0]);
+    final month = int.parse(parts[1]);
+    return '${_getMonthName(month)} $year';
+  }
+
+  String _getDayDisplayName(String dayKey) {
+    final parts = dayKey.split('-');
+    final year = int.parse(parts[0]);
+    final month = int.parse(parts[1]);
+    final day = int.parse(parts[2]);
+    final date = DateTime(year, month, day);
+    
+    final today = DateTime.now();
+    final yesterday = DateTime(today.year, today.month, today.day - 1);
+    
+    if (date.year == today.year && date.month == today.month && date.day == today.day) {
+      return 'Today';
+    } else if (date.year == yesterday.year && date.month == yesterday.month && date.day == yesterday.day) {
+      return 'Yesterday';
+    } else {
+      return '${_getMonthName(month)} ${day}, $year';
+    }
+  }
+
   Widget _deletedTransactionCard(Map<String, dynamic> tx) {
     final isExpanded = _expandedDeletedCards.contains(tx['id']);
-    final isDark = widget.isDarkMode;
     final isDebited = tx['isDebited'] == true;
     final tag = tx['tag'] as String?;
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 6, horizontal: 20),
       decoration: BoxDecoration(
-        color: isDark ? AppColors.darkCardBackground : AppColors.lightCardBackground,
+        color: AppColors.cardBackground,
         borderRadius: BorderRadius.circular(18),
         boxShadow: [
           BoxShadow(
-            color: isDark ? Colors.black.withOpacity(0.10) : Colors.grey.withOpacity(0.07),
+            color: Colors.grey.withOpacity(0.07),
             blurRadius: 16,
             offset: const Offset(0, 4),
           ),
@@ -2426,7 +2363,7 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
                             style: TextStyle(
                               fontSize: 15,
                               fontWeight: FontWeight.w500,
-                              color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
+                              color: AppColors.textSecondary,
                             ),
                           ),
                         ],
@@ -2491,27 +2428,27 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
                 const SizedBox(height: 10),
                 Row(
                   children: [
-                    Icon(Icons.account_balance_wallet_outlined, size: 16, color: isDark ? AppColors.darkTextTertiary : AppColors.lightTextTertiary),
+                    Icon(Icons.account_balance_wallet_outlined, size: 16, color: AppColors.textTertiary),
                     const SizedBox(width: 5),
                     Flexible(
                       child: Text(
-                        'From: [200~${tx['fromAccount'] ?? 'Unknown'}',
+                        'From: ${tx['fromAccount'] ?? 'Unknown'}',
                         style: TextStyle(
                           fontSize: 12.5,
-                          color: isDark ? AppColors.darkTextTertiary : AppColors.lightTextTertiary,
+                          color: AppColors.textTertiary,
                         ),
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
                     const SizedBox(width: 12),
-                    Icon(Icons.arrow_forward_ios_rounded, size: 13, color: isDark ? AppColors.darkTextTertiary : AppColors.lightTextTertiary),
+                    Icon(Icons.arrow_forward_ios_rounded, size: 13, color: AppColors.textTertiary),
                     const SizedBox(width: 5),
                     Flexible(
                       child: Text(
                         'To: ${tx['toAccount'] ?? 'Unknown'}',
                         style: TextStyle(
                           fontSize: 12.5,
-                          color: isDark ? AppColors.darkTextTertiary : AppColors.lightTextTertiary,
+                          color: AppColors.textTertiary,
                         ),
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -2521,23 +2458,23 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
                 const SizedBox(height: 10),
                 Row(
                   children: [
-                    Icon(Icons.calendar_today_outlined, size: 15, color: isDark ? AppColors.darkTextTertiary : AppColors.lightTextTertiary),
+                    Icon(Icons.calendar_today_outlined, size: 15, color: AppColors.textTertiary),
                     const SizedBox(width: 5),
                     Text(
                       _formatDate(tx['timestamp']),
                       style: TextStyle(
                         fontSize: 12,
-                        color: isDark ? AppColors.darkTextTertiary : AppColors.lightTextTertiary,
+                        color: AppColors.textTertiary,
                       ),
                     ),
                     const SizedBox(width: 14),
-                    Icon(Icons.access_time_outlined, size: 15, color: isDark ? AppColors.darkTextTertiary : AppColors.lightTextTertiary),
+                    Icon(Icons.access_time_outlined, size: 15, color: AppColors.textTertiary),
                     const SizedBox(width: 5),
                     Text(
                       _formatTime(tx['timestamp']),
                       style: TextStyle(
                         fontSize: 12,
-                        color: isDark ? AppColors.darkTextTertiary : AppColors.lightTextTertiary,
+                        color: AppColors.textTertiary,
                       ),
                     ),
                   ],
@@ -2550,7 +2487,7 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
                   alignment: Alignment.centerRight,
                   child: Icon(
                     isExpanded ? Icons.expand_less : Icons.expand_more,
-                    color: isDark ? AppColors.darkTextTertiary : AppColors.lightTextTertiary,
+                    color: AppColors.textTertiary,
                     size: 22,
                   ),
                 ),
@@ -2563,11 +2500,10 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
   }
 
   Widget _buildTransactionInfoGrid(Map<String, dynamic> tx) {
-    final isDark = widget.isDarkMode;
-    final borderColor = isDark ? AppColors.darkSurfaceLight : AppColors.lightSurfaceLight;
+    final borderColor = AppColors.surfaceLight;
     return Container(
       decoration: BoxDecoration(
-        color: isDark ? AppColors.darkSurfaceLight.withOpacity(0.18) : AppColors.lightSurfaceLight.withOpacity(0.35),
+        color: AppColors.surfaceLight.withOpacity(0.35),
         borderRadius: BorderRadius.circular(10),
         border: Border.all(color: borderColor, width: 1.1),
       ),
@@ -2583,13 +2519,11 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
                 icon: Icons.account_balance_wallet_outlined,
                 label: 'From',
                 value: tx['fromAccount'] ?? 'Unknown',
-                isDark: isDark,
               ),
               _buildInfoCell(
                 icon: Icons.arrow_forward_ios_rounded,
                 label: 'To',
                 value: tx['toAccount'] ?? 'Unknown',
-                isDark: isDark,
               ),
             ],
           ),
@@ -2599,13 +2533,11 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
                 icon: Icons.calendar_today_outlined,
                 label: 'Date',
                 value: _formatDate(tx['timestamp']),
-                isDark: isDark,
               ),
               _buildInfoCell(
                 icon: Icons.access_time_outlined,
                 label: 'Time',
                 value: _formatTime(tx['timestamp']),
-                isDark: isDark,
               ),
             ],
           ),
@@ -2618,14 +2550,13 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
     required IconData icon,
     required String label,
     required String value,
-    required bool isDark,
   }) {
     return Padding(
       padding: const EdgeInsets.all(7.0),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, size: 15, color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary),
+          Icon(icon, size: 15, color: AppColors.textSecondary),
           const SizedBox(width: 5),
           Expanded(
             child: Column(
@@ -2635,7 +2566,7 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
                   label,
                   style: TextStyle(
                     fontSize: 10,
-                    color: isDark ? AppColors.darkTextTertiary : AppColors.lightTextTertiary,
+                    color: AppColors.textTertiary,
                     fontWeight: FontWeight.w500,
                   ),
                 ),
@@ -2643,7 +2574,7 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
                   value,
                   style: TextStyle(
                     fontSize: 12,
-                    color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+                    color: AppColors.textPrimary,
                     fontWeight: FontWeight.w600,
                   ),
                   maxLines: 1,
@@ -2657,9 +2588,44 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
     );
   }
 
+  // Load news data
+  Future<void> _loadNews({bool isRefreshing = false}) async {
+    if (isRefreshing) {
+      setState(() {
+        _isRefreshingNews = true;
+      });
+    }
+    
+    try {
+      final news = await _fetchFinanceNews();
+      setState(() {
+        _newsData = news;
+        _isLoadingNews = false;
+        _isRefreshingNews = false;
+      });
+    } catch (e) {
+      setState(() {
+        _newsData = [];
+        _isLoadingNews = false;
+        _isRefreshingNews = false;
+      });
+    }
+  }
+
   // Add a method to fetch finance news from NewsAPI
   Future<List<Map<String, String>>> _fetchFinanceNews() async {
     const apiKey ='fbeb1c8586a1467da9845db403eee72c'; // <-- Replace with your NewsAPI.org API key
+    
+    // Keywords for finance-related news
+    final financeKeywords = [
+      'finance', 'financial', 'banking', 'investment', 'stock', 'market', 'trading',
+      'economy', 'economic', 'GDP', 'inflation', 'interest rate', 'central bank',
+      'cryptocurrency', 'bitcoin', 'crypto', 'blockchain', 'mutual fund', 'ETF',
+      'bond', 'forex', 'currency', 'bank', 'credit', 'loan', 'mortgage',
+      'insurance', 'tax', 'budget', 'revenue', 'profit', 'earnings', 'quarterly',
+      'IPO', 'merger', 'acquisition', 'startup', 'venture capital', 'funding'
+    ];
+    
     final url = Uri.parse('https://newsapi.org/v2/top-headlines?category=business&language=en&apiKey=$apiKey');
     try {
       final response = await http.get(url);
@@ -2670,6 +2636,18 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
           final List articles = data['articles'];
           return articles
               .where((a) => a['title'] != null && a['url'] != null)
+              .where((a) {
+                final title = (a['title'] as String).toLowerCase();
+                final description = (a['description'] as String? ?? '').toLowerCase();
+                final content = (a['content'] as String? ?? '').toLowerCase();
+                
+                // Check if any finance keywords are present in title, description, or content
+                return financeKeywords.any((keyword) => 
+                  title.contains(keyword.toLowerCase()) ||
+                  description.contains(keyword.toLowerCase()) ||
+                  content.contains(keyword.toLowerCase())
+                );
+              })
               .map<Map<String, String>>((a) => {
                     'title': a['title'] as String,
                     'url': a['url'] as String,
