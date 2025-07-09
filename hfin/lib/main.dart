@@ -109,7 +109,7 @@ class _MyAppState extends State<MyApp> {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'HFin',
+      title: 'Hance',
       theme: _isDarkMode ? _buildDarkTheme() : _buildLightTheme(),
       home: MainScreen(
         isDarkMode: _isDarkMode,
@@ -1420,7 +1420,7 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
             children: [
               // App Title (modern, bold, spaced)
               Text(
-                'HFin',
+                'Hance',
                 style: TextStyle(
                   fontSize: 38,
                   fontWeight: FontWeight.w700,
@@ -1476,7 +1476,7 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
       resizeToAvoidBottomInset: false,
       appBar: _isLoading ? null : AppBar(
         title: Text(
-          'HFin',
+          'Hance',
           style: TextStyle(
             fontSize: 24,
             fontWeight: FontWeight.w700,
