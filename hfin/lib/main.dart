@@ -310,7 +310,7 @@ class MainScreen extends StatefulWidget {
   State<MainScreen> createState() => _MainScreenState();
 }
 
-class _MainScreenState extends State<MainScreen> {
+class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateMixin {
   late int _selectedIndex;
   late List<Map<String, dynamic>> _transactions;
   late List<Map<String, dynamic>> _history;
@@ -339,11 +339,26 @@ class _MainScreenState extends State<MainScreen> {
   // 1. Add a map to track selected action per transaction at the top of _MainScreenState:
   Map<int, String?> _selectedAction = {};
 
+  // Shake animation
+  late AnimationController _shakeController;
+  late Animation<double> _shakeAnimation;
+
   @override
   void initState() {
     super.initState();
     _selectedIndex = 1; // 0: history, 1: home, 2: cancelled, 3: plus
+    _shakeController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 400),
+    );
+    _shakeAnimation = Tween<double>(begin: 0, end: 16).chain(CurveTween(curve: Curves.elasticIn)).animate(_shakeController);
     _initApp();
+  }
+
+  @override
+  void dispose() {
+    _shakeController.dispose();
+    super.dispose();
   }
 
   void _initApp() async {
@@ -1248,67 +1263,84 @@ class _MainScreenState extends State<MainScreen> {
                 ),
                 SizedBox(
                   height: 350, // Adjust as needed for card height
-                  child: CardSwiper(
-                    key: ValueKey(_transactions.length), // Add this line
-                    cardsCount: _transactions.length,
-                    numberOfCardsDisplayed: _transactions.length.clamp(1, 3),
-                    isLoop: false,
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
-                    cardBuilder: (context, index, percentThresholdX, percentThresholdY) {
-                      final tx = _transactions[index];
-                      return _modernTransactionCard(tx);
-                    },
-                    onSwipe: (index, direction, CardSwiperDirection? swipeDirection) async {
-                      // Check if index is still valid after potential previous deletions
-                      if (index >= _transactions.length) {
-                        return false;
-                      }
-                      final tx = _transactions[index];
-                      final selected = _selectedAction[tx['id']];
-                      if (swipeDirection == CardSwiperDirection.left) {
-                        // Left swipe: require category selection
-                        if (selected == null || selected == 'Delete') {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Please select a category before swiping left!')),
-                          );
-                          return false;
-                        } else {
-                          _tagTransaction(tx['id'], selected);
-                          setState(() {
-                            _selectedAction[tx['id']] = null;
-                          });
-                          return true;
-                        }
-                      } else if (swipeDirection == CardSwiperDirection.right) {
-                        // Right swipe: ask for confirmation
-                        final confirmed = await showDialog<bool>(
-                          context: context,
-                          builder: (context) => AlertDialog(
-                            title: const Text('Delete Transaction'),
-                            content: Text('Are you sure you want to delete this transaction for ₹${tx['amount'].toStringAsFixed(2)}?'),
-                            actions: [
-                              TextButton(
-                                onPressed: () => Navigator.of(context).pop(false),
-                                child: const Text('No'),
-                              ),
-                              TextButton(
-                                onPressed: () => Navigator.of(context).pop(true),
-                                child: const Text('Yes'),
-                              ),
-                            ],
+                  child: AnimatedBuilder(
+                    animation: _shakeController,
+                    builder: (context, child) {
+                      final offset = _shakeController.isAnimating ? _shakeAnimation.value * (1 - 2 * (_shakeController.value % 0.5).floor()) : 0.0;
+                      return Transform.translate(
+                        offset: Offset(offset, 0),
+                        child: CardSwiper(
+                          key: ValueKey(_transactions.length),
+                          cardsCount: _transactions.length,
+                          numberOfCardsDisplayed: _transactions.length.clamp(1, 3),
+                          isLoop: false,
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
+                          allowedSwipeDirection: const AllowedSwipeDirection.only(
+                            left: true,
+                            right: true,
+                            up: false,
+                            down: false,
                           ),
-                        );
-                        if (confirmed == true) {
-                          _cancelTransaction(tx['id']);
-                          setState(() {
-                            _selectedAction[tx['id']] = null;
-                          });
-                          return true; // allow swipe
-                        } else {
-                          return false; // prevent swipe
-                        }
-                      }
-                      return true;
+                          cardBuilder: (context, index, percentThresholdX, percentThresholdY) {
+                            final tx = _transactions[index];
+                            return _modernTransactionCard(tx);
+                          },
+                          onSwipe: (index, direction, CardSwiperDirection? swipeDirection) async {
+                            // Check if index is still valid after potential previous deletions
+                            if (index >= _transactions.length) {
+                              return false;
+                            }
+                            final tx = _transactions[index];
+                            final selected = _selectedAction[tx['id']];
+                            if (swipeDirection == CardSwiperDirection.left) {
+                              // Left swipe: require category selection
+                              if (selected == null || selected == 'Delete') {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(content: Text('Please select a category before swiping left!')),
+                                );
+                                _shakeController.forward(from: 0);
+                                return false;
+                              } else {
+                                _tagTransaction(tx['id'], selected);
+                                setState(() {
+                                  _selectedAction[tx['id']] = null;
+                                });
+                                return true;
+                              }
+                            } else if (swipeDirection == CardSwiperDirection.right) {
+                              // Right swipe: ask for confirmation
+                              final confirmed = await showDialog<bool>(
+                                context: context,
+                                builder: (context) => AlertDialog(
+                                  title: const Text('Delete Transaction'),
+                                  content: Text('Are you sure you want to delete this transaction for ₹${tx['amount'].toStringAsFixed(2)}?'),
+                                  actions: [
+                                    TextButton(
+                                      onPressed: () => Navigator.of(context).pop(false),
+                                      child: const Text('No'),
+                                    ),
+                                    TextButton(
+                                      onPressed: () => Navigator.of(context).pop(true),
+                                      child: const Text('Yes'),
+                                    ),
+                                  ],
+                                ),
+                              );
+                              if (confirmed == true) {
+                                _cancelTransaction(tx['id']);
+                                setState(() {
+                                  _selectedAction[tx['id']] = null;
+                                });
+                                return true; // allow swipe
+                              } else {
+                                _shakeController.forward(from: 0);
+                                return false; // prevent swipe
+                              }
+                            }
+                            return true;
+                          },
+                        ),
+                      );
                     },
                   ),
                 ),
