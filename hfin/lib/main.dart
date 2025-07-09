@@ -929,8 +929,8 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
                       Text(
                         '₹ ${tx['amount'].toStringAsFixed(2)}',
                         style: TextStyle(
-                          fontSize: 22,
-                          fontWeight: FontWeight.w700,
+                          fontSize: 16, // Reduced from 22
+                          fontWeight: FontWeight.w600, // Slightly less bold
                           color: isDebited ? AppColors.error : AppColors.success,
                         ),
                       ),
@@ -1254,10 +1254,10 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
                   child: Text(
                     'Recent Transactions',
                     style: TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.w700,
+                      fontSize: 16, // Reduced from 22
+                      fontWeight: FontWeight.w600, // Slightly less bold
                       color: widget.isDarkMode ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
-                      letterSpacing: 0.5,
+                      letterSpacing: 0.2,
                     ),
                   ),
                 ),
@@ -1397,7 +1397,7 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
                     ),
                   ),
                 ),
-                ..._cancelledTransactions.map((tx) => _modernTransactionCard(tx, showActions: false)).toList(),
+                ..._cancelledTransactions.map((tx) => _deletedTransactionCard(tx)).toList(),
                 const SizedBox(height: 16),
               ],
             ),
@@ -2074,20 +2074,41 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
                         ],
                       ),
                     ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: AppColors.error.withOpacity(0.13),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(
-                        'Deleted',
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.error,
+                    // Restore icon and DEBITED/CREDITED tag in a row, centered
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        IconButton(
+                          icon: Icon(Icons.restore, color: AppColors.primary, size: 22),
+                          tooltip: 'Restore',
+                          onPressed: () {
+                            setState(() {
+                              _transactions.insert(0, Map<String, dynamic>.from(tx));
+                              _cancelledTransactions.removeWhere((t) => t['id'] == tx['id']);
+                              _saveTransactions();
+                              _saveCancelledTransactions();
+                            });
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text('Transaction restored!')),
+                            );
+                          },
                         ),
-                      ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: AppColors.error.withOpacity(0.13),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            isDebited ? 'DEBITED' : 'CREDITED',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.error,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                     if (tag != null) ...[
                       const SizedBox(width: 8),
@@ -2116,7 +2137,7 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
                     const SizedBox(width: 5),
                     Flexible(
                       child: Text(
-                        'From: ${tx['fromAccount'] ?? 'Unknown'}',
+                        'From: [200~${tx['fromAccount'] ?? 'Unknown'}',
                         style: TextStyle(
                           fontSize: 12.5,
                           color: isDark ? AppColors.darkTextTertiary : AppColors.lightTextTertiary,
