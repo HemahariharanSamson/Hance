@@ -3,6 +3,9 @@ import 'package:flutter/services.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:flutter_card_swiper/flutter_card_swiper.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+import 'package:url_launcher/url_launcher.dart';
 
 // Color System - Dual Tone Design (Zomato/Swiggy inspired)
 class AppColors {
@@ -1250,7 +1253,7 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
               padding: const EdgeInsets.only(left: 0, right: 0, top: 0, bottom: 16),
               children: [
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 24, 20, 8),
+                  padding: const EdgeInsets.fromLTRB(20, 12, 20, 2),
                   child: Text(
                     'Recent Transactions',
                     style: TextStyle(
@@ -1262,7 +1265,7 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
                   ),
                 ),
                 SizedBox(
-                  height: 350, // Adjust as needed for card height
+                  height: 320, // Adjust as needed for card height
                   child: AnimatedBuilder(
                     animation: _shakeController,
                     builder: (context, child) {
@@ -1272,9 +1275,9 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
                         child: CardSwiper(
                           key: ValueKey(_transactions.length),
                           cardsCount: _transactions.length,
-                          numberOfCardsDisplayed: _transactions.length.clamp(1, 3),
+                          numberOfCardsDisplayed: _transactions.length.clamp(1, 2),
                           isLoop: false,
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 1),
                           allowedSwipeDirection: const AllowedSwipeDirection.only(
                             left: true,
                             right: true,
@@ -1284,7 +1287,7 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
                           cardBuilder: (context, index, percentThresholdX, percentThresholdY) {
                             final tx = _transactions[index];
                             return _modernTransactionCard(tx);
-                          },
+                          },  
                           onSwipe: (index, direction, CardSwiperDirection? swipeDirection) async {
                             // Check if index is still valid after potential previous deletions
                             if (index >= _transactions.length) {
@@ -1344,6 +1347,113 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
                     },
                   ),
                 ),
+                // News Container (now below cards)
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical:30),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: widget.isDarkMode ? AppColors.darkSurface : AppColors.lightSurface,
+                      borderRadius: BorderRadius.circular(12),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.04),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                      border: Border.all(
+                        color: widget.isDarkMode ? AppColors.darkSurfaceLight : AppColors.lightSurfaceLight,
+                        width: 1.0,
+                      ),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(14.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Icon(Icons.newspaper, color: AppColors.primary, size: 20),
+                              const SizedBox(width: 8),
+                              Text(
+                                'Finance News',
+                                style: TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w700,
+                                  color: widget.isDarkMode ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          FutureBuilder<List<Map<String, String>>>(
+                            future: _fetchFinanceNews(),
+                            builder: (context, snapshot) {
+                              if (snapshot.connectionState == ConnectionState.waiting) {
+                                return Row(
+                                  children: [
+                                    SizedBox(
+                                      width: 18,
+                                      height: 18,
+                                      child: CircularProgressIndicator(strokeWidth: 2, valueColor: AlwaysStoppedAnimation(AppColors.primary)),
+                                    ),
+                                    const SizedBox(width: 10),
+                                    Text('Fetching latest news...', style: TextStyle(fontSize: 13, color: widget.isDarkMode ? AppColors.darkTextSecondary : AppColors.lightTextSecondary)),
+                                  ],
+                                );
+                              } else if (snapshot.hasError) {
+                                return Text('Failed to load news.', style: TextStyle(fontSize: 13, color: AppColors.error));
+                              } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                                return Text('No news available.', style: TextStyle(fontSize: 13, color: widget.isDarkMode ? AppColors.darkTextTertiary : AppColors.lightTextTertiary));
+                              }
+                              final newsList = snapshot.data!;
+                              return Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: newsList.take(4).map((news) => Padding(
+                                  padding: const EdgeInsets.only(bottom: 6.0),
+                                  child: Row(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Padding(
+                                        padding: const EdgeInsets.only(top: 4.0),
+                                        child: Icon(Icons.circle, size: 7, color: AppColors.primary),
+                                      ),
+                                      const SizedBox(width: 7),
+                                      Expanded(
+                                        child: InkWell(
+                                          onTap: () async {
+                                            final url = news['url']!;
+                                            try {
+                                              await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+                                            } catch (e) {
+                                              ScaffoldMessenger.of(context).showSnackBar(
+                                                SnackBar(content: Text('Could not open the link.')),
+                                              );
+                                            }
+                                          },
+                                          child: Text(
+                                            news['title']!,
+                                            style: TextStyle(
+                                              fontSize: 13.5,
+                                              color: Colors.blue,
+                                              fontWeight: FontWeight.w500,
+                                              height: 1.3,
+                                              decoration: TextDecoration.underline,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                )).toList(),
+                              );
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
                 const SizedBox(height: 8),
               ],
             ),
@@ -1386,11 +1496,11 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
               padding: const EdgeInsets.only(left: 0, right: 0, top: 0, bottom: 16),
               children: [
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 24, 20, 8),
+                  padding: const EdgeInsets.fromLTRB(20, 12, 20, 2),
                   child: Text(
                     'Deleted Transactions',
                     style: TextStyle(
-                      fontSize: 22,
+                      fontSize: 16,
                       fontWeight: FontWeight.w700,
                       color: widget.isDarkMode ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
                       letterSpacing: 0.5,
@@ -2297,5 +2407,31 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
         ],
       ),
     );
+  }
+
+  // Add a method to fetch finance news from NewsAPI
+  Future<List<Map<String, String>>> _fetchFinanceNews() async {
+    const apiKey ='fbeb1c8586a1467da9845db403eee72c'; // <-- Replace with your NewsAPI.org API key
+    final url = Uri.parse('https://newsapi.org/v2/top-headlines?category=business&language=en&apiKey=$apiKey');
+    try {
+      final response = await http.get(url);
+      print('NewsAPI response: ' + response.body); // Debug print
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        if (data['status'] == 'ok' && data['articles'] != null) {
+          final List articles = data['articles'];
+          return articles
+              .where((a) => a['title'] != null && a['url'] != null)
+              .map<Map<String, String>>((a) => {
+                    'title': a['title'] as String,
+                    'url': a['url'] as String,
+                  })
+              .toList();
+        }
+      }
+      return [];
+    } catch (e) {
+      return [];
+    }
   }
 }
