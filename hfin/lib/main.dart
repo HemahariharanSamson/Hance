@@ -338,98 +338,6 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
     _historyBox = Hive.box('history');
     _cancelledBox = Hive.box('cancelled');
   }
-// // ======================================
-//   // ADD THIS METHOD TO CREATE TEST DATA
-//   void _addTestData() {
-//     // Define a specific test date - July 09, 2025 (today)
-//     final testDate = DateTime(2025, 7, 09);
-    
-//     // Only add test data if not already present
-//     final hasTestData = _transactions.any((tx) {
-//       final txDate = tx['timestamp'] as DateTime;
-//       return txDate.year == testDate.year && 
-//             txDate.month == testDate.month && 
-//             txDate.day == testDate.day;
-//     });
-    
-//     if (!hasTestData) {
-//       final testTransactions = [
-//         {
-//           'id': 1001,
-//           'amount': 450.00,
-//           'merchant': 'Swiggy - Pizza Hut',
-//           'fromAccount': 'HDFC Bank XX1234',
-//           'toAccount': 'Swiggy Merchant',
-//           'timestamp': testDate.add(const Duration(hours: 12, minutes: 30)),
-//           'tag': null, // null because these are untagged transactions
-//           'isDebited': true,
-//         },
-//         {
-//           'id': 1002,
-//           'amount': 75.50,
-//           'merchant': 'Uber Auto',
-//           'fromAccount': 'HDFC Bank XX1234',
-//           'toAccount': 'Uber Technologies',
-//           'timestamp': testDate.add(const Duration(hours: 9, minutes: 15)),
-//           'tag': null,
-//           'isDebited': true,
-//         },
-//         {
-//           'id': 1003,
-//           'amount': 1250.00,
-//           'merchant': 'Amazon Shopping',
-//           'fromAccount': 'HDFC Bank XX1234',
-//           'toAccount': 'Amazon Seller',
-//           'timestamp': testDate.add(const Duration(hours: 14, minutes: 45)),
-//           'tag': null,
-//           'isDebited': true,
-//         },
-//       ];
-      
-//       // Add to current transactions (for home screen)
-//       _transactions.addAll(testTransactions);
-      
-//       // Also add some historical data for calendar testing
-//       final historicalTransactions = [
-//         {
-//           'id': 1004,
-//           'amount': 2500.00,
-//           'merchant': 'Salary Credit',
-//           'fromAccount': 'ABC Company Ltd',
-//           'toAccount': 'HDFC Bank XX1234',
-//           'timestamp': testDate.add(const Duration(hours: 10, minutes: 0)),
-//           'tag': null,
-//           'isDebited': false,
-//         },
-//         {
-//           'id': 1005,
-//           'amount': 350.00,
-//           'merchant': 'Zomato - McDonalds',
-//           'fromAccount': 'HDFC Bank XX1234',
-//           'toAccount': 'Zomato Merchant',
-//           'timestamp': testDate.add(const Duration(hours: 20, minutes: 30)),
-//           'tag': 'Food',
-//           'isDebited': true,
-//         },
-//         {
-//           'id': 1006,
-//           'amount': 850.00,
-//           'merchant': 'BESCOM Electricity',
-//           'fromAccount': 'HDFC Bank XX1234',
-//           'toAccount': 'BESCOM',
-//           'timestamp': testDate.add(const Duration(hours: 16, minutes: 20)),
-//           'tag': 'Utility',
-//           'isDebited': true,
-//         },
-//       ];
-      
-//       // Add to history (for calendar testing)
-//       _history.addAll(historicalTransactions);
-      
-//       print('Added test data for ${testDate.day}/${testDate.month}/${testDate.year}');
-//     }
-//   }
-// // ====================================== 
   void _loadData() {
     // Load transactions
     final savedTransactions = _transactionsBox.get('transactions', defaultValue: <Map<String, dynamic>>[]);
@@ -441,9 +349,6 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
       _history = _convertFromStorage(savedHistory);
       _cancelledTransactions = _convertFromStorage(savedCancelled);
 
-// // ======================================
-//       _addTestData(); //REMOVE
-// // ======================================
       // Sort transactions by timestamp (latest first)
       _transactions.sort((a, b) => (b['timestamp'] as DateTime).compareTo(a['timestamp'] as DateTime));
       _history.sort((a, b) => (b['timestamp'] as DateTime).compareTo(a['timestamp'] as DateTime));
@@ -594,94 +499,139 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
 
   Map<String, dynamic>? _parseTransactionFromSms(String? body, String? sender, DateTime? timeReceived) {
     final text = body ?? '';
-
+    
     // Enhanced amount extraction for various formats
-    final amountRegex = RegExp(r'(?:₹|Rs\.?|INR|Rs\.?|Rs)\s?(\d+(?:[.,]\d+)*)');
+    final amountRegex = RegExp(r'(?:INR|₹|Rs\.?|USD|\$)\s?(\d+(?:[.,]\d+)*)', caseSensitive: false);
     final amountMatch = amountRegex.firstMatch(text);
     if (amountMatch == null) return null;
+    
     final amount = double.tryParse(amountMatch.group(1)!.replaceAll(',', '')) ?? 0.0;
+    if (amount <= 0) return null;
 
-    // Enhanced transaction type detection for Indian banks
+    // Determine transaction type (debit/credit)
     bool isDebited = false;
     bool isCredited = false;
     
-    // Check for debit keywords
-    if (RegExp(r'\b(debited|paid from|is paid from|spent|withdrawn|deducted|charged|purchase|payment)\b', caseSensitive: false).hasMatch(text)) {
+    // Check for debit keywords (more specific patterns first)
+    if (RegExp(r'\b(is paid from|paid from|debited from|debited|withdrawn|deducted|charged|purchase|payment|spent)\b', caseSensitive: false).hasMatch(text)) {
       isDebited = true;
     }
     // Check for credit keywords
-    else if (RegExp(r'\b(credited|is credited|is credited for|received|deposited|added|refund|cashback|reward)\b', caseSensitive: false).hasMatch(text)) {
+    else if (RegExp(r'\b(is credited|credited|received|deposited|added|refund|cashback|reward)\b', caseSensitive: false).hasMatch(text)) {
       isCredited = true;
     }
-    // Default to debited if not clear
-    if (!isDebited && !isCredited) isDebited = true;
-
-    // Extract merchant and account information
-    String? fromAccount;
-    String? toAccount;
-    String merchant = 'Unknown';
-
-    // Common Indian bank SMS patterns
-    if (isDebited) {
-      // Pattern 1: "Rs.500 debited from A/c XX1234 on 01/01/2024 at 10:30 AM. Available balance: Rs.10000"
-      final pattern1 = RegExp(r'(?:Rs\.?|₹|INR)\s?\d+(?:[.,]\d+)*\s+debited\s+from\s+(?:A/c|Account)\s+([A-Z0-9]+)', caseSensitive: false);
-      final match1 = pattern1.firstMatch(text);
-      if (match1 != null) {
-        fromAccount = 'Account ${match1.group(1)}';
-      }
-
-      // Pattern 2: "Your A/c XX1234 debited Rs.500 on 01/01/2024 at 10:30 AM"
-      final pattern2 = RegExp(r'Your\s+(?:A/c|Account)\s+([A-Z0-9]+)\s+debited', caseSensitive: false);
-      final match2 = pattern2.firstMatch(text);
-      if (match2 != null) {
-        fromAccount = 'Account ${match2.group(1)}';
-      }
-
-      // Pattern 3: "Rs.500 debited from A/c XX1234 for payment to MERCHANT NAME"
-      final pattern3 = RegExp(r'for\s+(?:payment\s+to|purchase\s+at|transaction\s+at)\s+([A-Za-z0-9\s]+?)(?:\s+on|\s+at|\.|$)', caseSensitive: false);
-      final match3 = pattern3.firstMatch(text);
-      if (match3 != null) {
-        merchant = match3.group(1)?.trim() ?? 'Unknown';
-      }
-
-      // Pattern 4: "UPI transaction of Rs.500 to MERCHANT@BANK"
-      final pattern4 = RegExp(r'UPI\s+transaction\s+of\s+(?:Rs\.?|₹|INR)\s?\d+(?:[.,]\d+)*\s+to\s+([A-Za-z0-9@]+)', caseSensitive: false);
-      final match4 = pattern4.firstMatch(text);
-      if (match4 != null) {
-        merchant = match4.group(1)?.trim() ?? 'Unknown';
-      }
-
-    } else if (isCredited) {
-      // Pattern 1: "Rs.500 credited to A/c XX1234 on 01/01/2024 at 10:30 AM"
-      final pattern1 = RegExp(r'(?:Rs\.?|₹|INR)\s?\d+(?:[.,]\d+)*\s+credited\s+to\s+(?:A/c|Account)\s+([A-Z0-9]+)', caseSensitive: false);
-      final match1 = pattern1.firstMatch(text);
-      if (match1 != null) {
-        toAccount = 'Account ${match1.group(1)}';
-      }
-
-      // Pattern 2: "Your A/c XX1234 credited Rs.500 on 01/01/2024 at 10:30 AM"
-      final pattern2 = RegExp(r'Your\s+(?:A/c|Account)\s+([A-Z0-9]+)\s+credited', caseSensitive: false);
-      final match2 = pattern2.firstMatch(text);
-      if (match2 != null) {
-        toAccount = 'Account ${match2.group(1)}';
-      }
-
-      // Pattern 3: "Rs.500 credited from SENDER NAME"
-      final pattern3 = RegExp(r'(?:credited|received)\s+from\s+([A-Za-z0-9\s]+?)(?:\s+on|\s+at|\.|$)', caseSensitive: false);
-      final match3 = pattern3.firstMatch(text);
-      if (match3 != null) {
-        merchant = match3.group(1)?.trim() ?? 'Unknown';
+    
+    // If still unclear, look at sentence structure
+    if (!isDebited && !isCredited) {
+      // If amount comes before "from", it's likely a debit
+      // If amount comes after "from", it's likely a credit
+      final amountIndex = text.indexOf(amountMatch.group(0)!);
+      final fromIndex = text.toLowerCase().indexOf(' from ');
+      
+      if (fromIndex > 0) {
+        if (amountIndex < fromIndex) {
+          isDebited = true; // "INR 40.00 is paid from account" = debit
+        } else {
+          isCredited = true; // "credited for INR 2.00 from sender" = credit
+        }
+      } else {
+        isDebited = true; // Default to debit if unclear
       }
     }
 
-    // Fallbacks
-    fromAccount ??= sender ?? 'Unknown';
-    toAccount ??= merchant;
+    // Extract account information
+    String fromAccount = 'Unknown';
+    String toAccount = 'Unknown';
+    String merchant = 'Unknown';
 
-    // Clean up merchant name
+    if (isDebited) {
+      // For debits: extract account and recipient
+      
+      // Extract account pattern: "from BANK account XXNUMBER" or "from BANK Acc XXNUMBER"
+      final accountPattern = RegExp(r'from\s+([A-Z]+)\s+(?:account|Acc)\s+([A-Z0-9]+)', caseSensitive: false);
+      final accountMatch = accountPattern.firstMatch(text);
+      
+      if (accountMatch != null) {
+        final bankName = accountMatch.group(1)!;
+        final accountNum = accountMatch.group(2)!;
+        fromAccount = '$bankName Account $accountNum';
+      }
+      
+      // Extract recipient/merchant
+      // Pattern 1: "to MERCHANT NAME on date"
+      final recipientPattern1 = RegExp(r'to\s+([^0-9]+?)\s+on\s+\d', caseSensitive: false);
+      final recipientMatch1 = recipientPattern1.firstMatch(text);
+      
+      if (recipientMatch1 != null) {
+        merchant = recipientMatch1.group(1)!.trim();
+      } else {
+        // Pattern 2: "to MERCHANT" (at end or before "with ref")
+        final recipientPattern2 = RegExp(r'to\s+([^0-9]+?)(?:\s+with\s+ref|\s* $)', caseSensitive: false);
+        final recipientMatch2 = recipientPattern2.firstMatch(text);
+        
+        if (recipientMatch2 != null) {
+          merchant = recipientMatch2.group(1)!.trim();
+        }
+      }
+      
+      toAccount = merchant;
+      
+    } else if (isCredited) {
+      // For credits: extract account and sender
+      
+      // Extract account pattern
+      final accountPattern = RegExp(r'(?:Your\s+)?([A-Z]+)\s+(?:account|Acc)\s+([A-Z0-9]+)', caseSensitive: false);
+      final accountMatch = accountPattern.firstMatch(text);
+      
+      if (accountMatch != null) {
+        final bankName = accountMatch.group(1)!;
+        final accountNum = accountMatch.group(2)!;
+        toAccount = '$bankName Account $accountNum';
+      }
+      
+      // Extract sender
+      // Pattern 1: "from sendername@bank"
+      final senderPattern1 = RegExp(r'from\s+([^\.\s]+@[^\.\s]+)', caseSensitive: false);
+      final senderMatch1 = senderPattern1.firstMatch(text);
+      
+      if (senderMatch1 != null) {
+        merchant = senderMatch1.group(1)!.trim();
+        // Clean up UPI ID for display
+        merchant = merchant.replaceAll(RegExp(r'@[a-z]+ $'), ''); // Remove @bank suffix
+      } else {
+        // Pattern 2: "from SENDER NAME"
+        final senderPattern2 = RegExp(r'from\s+([^0-9]+?)(?:\s+on|\s+with|\.|$)', caseSensitive: false);
+        final senderMatch2 = senderPattern2.firstMatch(text);
+        
+        if (senderMatch2 != null) {
+          merchant = senderMatch2.group(1)!.trim();
+        }
+      }
+      
+      fromAccount = merchant;
+    }
+
+    // Clean up merchant/sender names
     if (merchant != 'Unknown') {
-      merchant = merchant.replaceAll(RegExp(r'@[A-Za-z]+$'), ''); // Remove UPI bank suffix
-      merchant = merchant.replaceAll(RegExp(r'\s+'), ' ').trim(); // Clean extra spaces
+      // Remove common UPI suffixes and clean up
+      merchant = merchant.replaceAll(RegExp(r'@[a-z]+$'), '');
+      merchant = merchant.replaceAll(RegExp(r'\s+'), ' ').trim();
+      
+      // Handle special cases
+      if (merchant.toLowerCase().contains('mr ') || merchant.toLowerCase().contains('ms ')) {
+        // Keep as is for person names
+      } else {
+        // Convert to title case for business names
+        merchant = _toTitleCase(merchant);
+      }
+    }
+
+    // Fallback values
+    if (fromAccount == 'Unknown') {
+      fromAccount = sender ?? 'Unknown Bank';
+    }
+    if (toAccount == 'Unknown') {
+      toAccount = merchant;
     }
 
     return {
@@ -694,6 +644,14 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
       'tag': null,
       'isDebited': isDebited,
     };
+  }
+
+  // Helper function to convert text to title case
+  String _toTitleCase(String text) {
+    return text.toLowerCase().split(' ').map((word) {
+      if (word.isEmpty) return word;
+      return word[0].toUpperCase() + word.substring(1);
+    }).join(' ');
   }
 
   void _onItemTapped(int index) {
