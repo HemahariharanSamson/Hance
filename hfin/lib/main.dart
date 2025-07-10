@@ -1938,36 +1938,47 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
   Widget build(BuildContext context) {
     return Scaffold(
       resizeToAvoidBottomInset: false,
-      appBar: (_isLoading || _showOnboarding || _isScanning || _selectedIndex == 0 || _selectedIndex == 2) ? null : AppBar(
-        leading: Padding(
-          padding: const EdgeInsets.all(8.0),
-          child: Image.asset(
-            'assets/icon/icon.png',
-            fit: BoxFit.contain,
-          ),
-        ),
-        title: Transform.translate(
-          offset: Offset(-20, 0), // Move text 20 pixels to the left
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-          'Hance',
-          style: TextStyle(
-            fontSize: 24,
-            fontWeight: FontWeight.w700,
-            letterSpacing: 1.2,
-                  color: AppColors.textPrimary,
-            fontFamily: 'Roboto',
+      appBar: (_isLoading || _showOnboarding || _isScanning || _selectedIndex == 0 || _selectedIndex == 2)
+          ? null
+          : AppBar(
+              leading: Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: Image.asset(
+                  'assets/icon/icon.png',
+                  fit: BoxFit.contain,
                 ),
               ),
-            ],
-          ),
-        ),
-        centerTitle: false,
-        elevation: 0,
-        backgroundColor: AppColors.surface,
-      ),
+              title: Transform.translate(
+                offset: Offset(-20, 0), // Move text 20 pixels to the left
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'Hance',
+                      style: TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 1.2,
+                        color: AppColors.textPrimary,
+                        fontFamily: 'Roboto',
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              centerTitle: false,
+              elevation: 0,
+              backgroundColor: AppColors.surface,
+              actions: _selectedIndex == 1
+                  ? [
+                      IconButton(
+                        icon: Icon(Icons.support_agent, color: AppColors.primary),
+                        tooltip: 'Contact Dev',
+                        onPressed: () => _showContactDevDialog(context),
+                      ),
+                    ]
+                  : null,
+            ),
       body: SafeArea(
         top: false,
         bottom: false,
@@ -3647,6 +3658,121 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
     });
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text('Transaction restored to pending!')),
+    );
+  }
+
+  // --- Contact Dev Dialog ---
+  void _showContactDevDialog(BuildContext context) {
+    final TextEditingController _controller = TextEditingController();
+    bool _messageSent = false;
+    showDialog(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              title: Row(
+                children: [
+                  Icon(Icons.support_agent, color: AppColors.primary),
+                  SizedBox(width: 8),
+                  Text('Contact Developer'),
+                ],
+              ),
+              content: _messageSent
+                  ? Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Text('Thank you for reaching out!'),
+                        SizedBox(height: 16),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            IconButton(
+                              icon: FaIcon(FontAwesomeIcons.solidEnvelope, color: AppColors.primary),
+                              tooltip: 'Email',
+                              onPressed: () async {
+                                final Uri emailLaunchUri = Uri(
+                                  scheme: 'mailto',
+                                  path: 'hemahariharansamson@gmail.com',
+                                  query: 'subject=Hance App Feedback',
+                                );
+                                await launchUrl(emailLaunchUri);
+                              },
+                            ),
+                            IconButton(
+                              icon: FaIcon(FontAwesomeIcons.github, color: Colors.black),
+                              tooltip: 'GitHub',
+                              onPressed: () async {
+                                await launchUrl(Uri.parse('https://github.com/HemahariharanSamson'), mode: LaunchMode.externalApplication);
+                              },
+                            ),
+                            IconButton(
+                              icon: FaIcon(FontAwesomeIcons.linkedin, color: Color(0xFF0A66C2)),
+                              tooltip: 'LinkedIn',
+                              onPressed: () async {
+                                await launchUrl(Uri.parse('https://in.linkedin.com/in/hemahariharansamson'), mode: LaunchMode.externalApplication);
+                              },
+                            ),
+                            IconButton(
+                              icon: FaIcon(FontAwesomeIcons.instagram, color: Color(0xFFE1306C)),
+                              tooltip: 'Instagram',
+                              onPressed: () async {
+                                await launchUrl(Uri.parse('https://www.instagram.com/hemahariharansamson/'), mode: LaunchMode.externalApplication);
+                              },
+                            ),
+                          ],
+                        ),
+                        SizedBox(height: 8),
+                      ],
+                    )
+                  : Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        TextField(
+                          controller: _controller,
+                          maxLines: 4,
+                          decoration: InputDecoration(
+                            hintText: 'Type your message here...',
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                          ),
+                        ),
+                      ],
+                    ),
+              actions: _messageSent
+                  ? [
+                      TextButton(
+                        onPressed: () => Navigator.of(context).pop(),
+                        child: Text('Close'),
+                      ),
+                    ]
+                  : [
+                      TextButton(
+                        onPressed: () => Navigator.of(context).pop(),
+                        child: Text('Cancel'),
+                      ),
+                      ElevatedButton(
+                        onPressed: () async {
+                          final message = _controller.text.trim();
+                          if (message.isEmpty) return;
+                          final Uri emailLaunchUri = Uri(
+                            scheme: 'mailto',
+                            path: 'hemahariharansamson@gmail.com',
+                            query: 'subject=Hance App Feedback&body=${Uri.encodeComponent(message)}',
+                          );
+                          await launchUrl(emailLaunchUri);
+                          setState(() {
+                            _messageSent = true;
+                          });
+                        },
+                        child: Text('Send'),
+                      ),
+                    ],
+            );
+          },
+        );
+      },
     );
   }
 }
