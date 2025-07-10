@@ -2606,7 +2606,122 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
                             ),
                           ),
                         ),
-                        ...dayTransactions.map((tx) => _modernTransactionCard(tx, showActions: false)).toList(),
+                        ...dayTransactions.map((tx) => Container(
+                          margin: const EdgeInsets.symmetric(vertical: 6, horizontal: 20),
+                          decoration: BoxDecoration(
+                            color: AppColors.cardBackground,
+                            borderRadius: BorderRadius.circular(18),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.grey.withOpacity(0.07),
+                                blurRadius: 16,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
+                          ),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 18),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Icon(
+                                      tx['isDebited'] == true ? Icons.arrow_upward_rounded : Icons.arrow_downward_rounded,
+                                      color: tx['isDebited'] == true ? AppColors.error : AppColors.success,
+                                      size: 28,
+                                    ),
+                                    const SizedBox(width: 10),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            '₹ ${tx['amount'].toStringAsFixed(2)}',
+                                            style: TextStyle(
+                                              fontSize: 16,
+                                              fontWeight: FontWeight.w600,
+                                              color: tx['isDebited'] == true ? AppColors.error : AppColors.success,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 2),
+                                          Text(
+                                            tx['merchant'] ?? 'Unknown',
+                                            style: TextStyle(
+                                              fontSize: 15,
+                                              fontWeight: FontWeight.w500,
+                                              color: AppColors.textSecondary,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    // Right side: restore and tags at the top
+                                    Column(
+                                      mainAxisSize: MainAxisSize.min,
+                                      crossAxisAlignment: CrossAxisAlignment.end,
+                                      children: [
+                                        Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            GestureDetector(
+                                              onTap: () => _restoreTransactionFromHistory(tx['id']),
+                                              child: Container(
+                                                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 0),
+                                                alignment: Alignment.center,
+                                                child: Icon(Icons.restore, color: AppColors.primary, size: 20),
+                                              ),
+                                            ),
+                                            const SizedBox(width: 4),
+                                            Container(
+                                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                              alignment: Alignment.center,
+                                              decoration: BoxDecoration(
+                                                color: (tx['isDebited'] == true
+                                                        ? AppColors.error.withOpacity(0.13)
+                                                        : AppColors.success.withOpacity(0.13)),
+                                                borderRadius: BorderRadius.circular(8),
+                                              ),
+                                              child: Text(
+                                                tx['isDebited'] == true ? 'DEBITED' : 'CREDITED',
+                                                style: TextStyle(
+                                                  fontSize: 11,
+                                                  fontWeight: FontWeight.w600,
+                                                  color: tx['isDebited'] == true ? AppColors.error : AppColors.success,
+                                                ),
+                                              ),
+                                            ),
+                                            if (tx['tag'] != null) ...[
+                                              const SizedBox(width: 8),
+                                              Container(
+                                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                                decoration: BoxDecoration(
+                                                  color: _getTagColor(tx['tag']).withOpacity(0.13),
+                                                  borderRadius: BorderRadius.circular(8),
+                                                ),
+                                                child: Text(
+                                                  tx['tag'],
+                                                  style: TextStyle(
+                                                    fontSize: 11,
+                                                    fontWeight: FontWeight.w600,
+                                                    color: _getTagColor(tx['tag']),
+                                                  ),
+                                                ),
+                                              ),
+                                            ],
+                                          ],
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 10),
+                                _buildTransactionInfoGrid(tx),
+                              ],
+                            ),
+                          ),
+                        )).toList(),
                         const SizedBox(height: 8),
                       ],
                     ),
@@ -2910,8 +3025,8 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
                       Text(
                         '₹ ${tx['amount'].toStringAsFixed(2)}',
                         style: TextStyle(
-                          fontSize: 22,
-                          fontWeight: FontWeight.w700,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
                           color: AppColors.error,
                         ),
                       ),
@@ -2927,59 +3042,75 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
                     ],
                   ),
                 ),
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.center,
+                // Right side: restore and tags at the top (match calendar card)
+                Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
-                    IconButton(
-                      icon: Icon(Icons.restore, color: AppColors.primary, size: 22),
-                      tooltip: 'Restore',
-                      onPressed: () {
-                        setState(() {
-                          _transactions.insert(0, Map<String, dynamic>.from(tx));
-                          _cancelledTransactions.removeWhere((t) => t['id'] == tx['id']);
-                          _saveTransactions();
-                          _saveCancelledTransactions();
-                        });
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('Transaction restored!')),
-                        );
-                      },
-                    ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: AppColors.error.withOpacity(0.13),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(
-                        isDebited ? 'DEBITED' : 'CREDITED',
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.error,
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        GestureDetector(
+                          onTap: () {
+                            setState(() {
+                              final restoredTx = Map<String, dynamic>.from(tx);
+                              restoredTx['tag'] = null;
+                              _transactions.insert(0, restoredTx);
+                              _cancelledTransactions.removeWhere((t) => t['id'] == tx['id']);
+                              _saveTransactions();
+                              _saveCancelledTransactions();
+                            });
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text('Transaction restored to pending!')),
+                            );
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 0),
+                            alignment: Alignment.center,
+                            child: Icon(Icons.restore, color: AppColors.primary, size: 20),
+                          ),
                         ),
-                      ),
+                        const SizedBox(width: 4),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          alignment: Alignment.center,
+                          decoration: BoxDecoration(
+                            color: (isDebited
+                                    ? AppColors.error.withOpacity(0.13)
+                                    : AppColors.success.withOpacity(0.13)),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            isDebited ? 'DEBITED' : 'CREDITED',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              color: isDebited ? AppColors.error : AppColors.success,
+                            ),
+                          ),
+                        ),
+                        if (tag != null) ...[
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: _getTagColor(tag).withOpacity(0.13),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Text(
+                              tag,
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                                color: _getTagColor(tag),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
                   ],
                 ),
-                if (tag != null) ...[
-                  const SizedBox(width: 8),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: _getTagColor(tag).withOpacity(0.13),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Text(
-                      tag,
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
-                        color: _getTagColor(tag),
-                      ),
-                    ),
-                  ),
-                ],
               ],
             ),
             const SizedBox(height: 10),
@@ -3283,6 +3414,21 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
           ],
         ),
       ),
+    );
+  }
+
+  void _restoreTransactionFromHistory(int id) {
+    if (_transactions.any((t) => t['id'] == id)) return;
+    setState(() {
+      final tx = Map<String, dynamic>.from(_history.firstWhere((t) => t['id'] == id));
+      tx['tag'] = null;
+      _transactions.insert(0, tx);
+      _history.removeWhere((t) => t['id'] == id);
+      _saveTransactions();
+      _saveHistory();
+    });
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Transaction restored to pending!')),
     );
   }
 }
