@@ -69,8 +69,8 @@ A Flutter-based fintech application that automatically scans SMS messages to tra
 
 1. **Clone the Repository**
    ```bash
-   git clone https://github.com/yourusername/hance-app.git
-   cd hance-app
+   git clone https://github.com/yourusername/hance.git
+   cd hance
    ```
 
 2. **Install Dependencies**
@@ -195,24 +195,6 @@ The app fetches financial news from external APIs. Configure your news API endpo
 4. Push to the branch (`git push origin feature/amazing-feature`)
 5. Open a Pull Request
 
-## Testing
-
-### Unit Tests
-```bash
-flutter test
-```
-
-### Integration Tests
-```bash
-flutter test integration_test/
-```
-
-### Manual Testing
-- Test SMS parsing with various bank formats
-- Verify transaction categorization
-- Check analytics calculations
-- Validate UI responsiveness
-
 ## Deployment
 
 ### Android Release
@@ -251,8 +233,7 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 For support and questions:
 - Open an issue on GitHub
-- Email: support@hance-app.com
-- Documentation: [Wiki](https://github.com/yourusername/hance-app/wiki)
+- Email: hemahariharansamson@gmail.com
 
 ## Acknowledgments
 
