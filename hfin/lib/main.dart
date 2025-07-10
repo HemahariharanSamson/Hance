@@ -198,7 +198,7 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
   late List<Map<String, dynamic>> _transactions;
   late List<Map<String, dynamic>> _history;
   late int _nextId;
-  static const MethodChannel _channel = MethodChannel('sms_channel');
+  static const EventChannel _notificationChannel = EventChannel('notification_channel');
   late Box _transactionsBox;
   late Box _historyBox;
   late Box _cancelledBox;
@@ -288,7 +288,6 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
     }
     
     if (_hasCompletedOnboarding) {
-      // Returning user - show scanning screen directly
       setState(() {
         _isLoading = false;
         _showOnboarding = false;
@@ -296,13 +295,29 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
       });
       _startScanningProcess();
     } else {
-      // First-time user - show onboarding first
       setState(() {
         _isLoading = false;
         _showOnboarding = true;
         _isScanning = false;
       });
     }
+
+    // Listen for notification events
+    _notificationChannel.receiveBroadcastStream().listen((event) {
+      print('Received notification event: $event'); // Debug print
+      final tx = _parseTransactionFromNotification(
+        event['text'],
+        event['title'],
+        event['timestamp'],
+        event['package'],
+      );
+      if (tx != null) {
+        setState(() {
+          _transactions.insert(0, tx);
+        });
+        _saveTransactions();
+      }
+    });
   }
 
   Future<void> _startScanningProcess() async {
@@ -316,9 +331,6 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
     setState(() {
       _scanningMessage = 'Processing transactions...';
     });
-    
-    // Initialize SMS listener and scan today's messages
-    await _initSmsListener();
     
     // Add delay for processing animation
     await Future.delayed(const Duration(milliseconds: 1500));
@@ -382,61 +394,6 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
         });
       }
     });
-    
-    // Load pending transactions from native storage
-    _loadPendingTransactions();
-  }
-
-  void _loadPendingTransactions() async {
-    try {
-      final pendingTransactions = await _channel.invokeMethod('getPendingTransactions');
-      if (pendingTransactions is List && pendingTransactions.isNotEmpty) {
-        setState(() {
-          for (final tx in pendingTransactions) {
-            if (tx is Map) {
-              final transaction = _parseTransactionFromSms(
-                tx['body'] as String?,
-                tx['sender'] as String?,
-                tx['timestamp'] != null ? DateTime.fromMillisecondsSinceEpoch(tx['timestamp'] as int) : null,
-              );
-              if (transaction != null) {
-                _transactions.insert(0, transaction);
-                _nextId++;
-              }
-            }
-          }
-        });
-        // Sort transactions by timestamp (latest first)
-        _transactions.sort((a, b) => (b['timestamp'] as DateTime).compareTo(a['timestamp'] as DateTime));
-        _saveTransactions();
-        // Clear pending transactions after loading
-        await _channel.invokeMethod('clearPendingTransactions');
-      }
-    } catch (e) {
-      print('Error loading pending transactions: $e');
-    }
-  }
-
-  List<Map<String, dynamic>> _convertFromStorage(List<dynamic> data) {
-    return data.map((item) {
-      final map = Map<String, dynamic>.from(item);
-      // Convert timestamp back to DateTime
-      if (map['timestamp'] is int) {
-        map['timestamp'] = DateTime.fromMillisecondsSinceEpoch(map['timestamp'] as int);
-      }
-      return map;
-    }).toList();
-  }
-
-  List<Map<String, dynamic>> _convertToStorage(List<Map<String, dynamic>> data) {
-    return data.map((item) {
-      final map = Map<String, dynamic>.from(item);
-      // Convert DateTime to milliseconds for storage
-      if (map['timestamp'] is DateTime) {
-        map['timestamp'] = (map['timestamp'] as DateTime).millisecondsSinceEpoch;
-      }
-      return map;
-    }).toList();
   }
 
   void _saveTransactions() {
@@ -449,220 +406,6 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
 
   void _saveCancelledTransactions() {
     _cancelledBox.put('cancelled', _convertToStorage(_cancelledTransactions));
-  }
-
-  Future<void> _initSmsListener() async {
-    try {
-      // Request SMS permissions
-      final bool? hasPermission = await _channel.invokeMethod('requestSmsPermissions');
-      if (hasPermission == true) {
-        // Scan SMS for today's transactions when app opens
-        await _scanTodaySms();
-      }
-    } catch (e) {
-      print('Error initializing SMS scanner: $e');
-    }
-  }
-
-  Future<void> _scanTodaySms() async {
-    try {
-      // Get today's SMS and parse for transactions
-      final todaySms = await _channel.invokeMethod('getTodaySms');
-      if (todaySms is List && todaySms.isNotEmpty) {
-        setState(() {
-          for (final sms in todaySms) {
-            if (sms is Map) {
-              final transaction = _parseTransactionFromSms(
-                sms['body'] as String?,
-                sms['sender'] as String?,
-                sms['timestamp'] != null ? DateTime.fromMillisecondsSinceEpoch(sms['timestamp'] as int) : null,
-              );
-              if (transaction != null) {
-                // Create a unique identifier for this transaction based on SMS content and time
-                final transactionKey = '${transaction['amount']}_${transaction['merchant']}_${(transaction['timestamp'] as DateTime).millisecondsSinceEpoch ~/ 60000}'; // Round to minute
-                
-                // Check if this transaction is already in history
-                final isInHistory = _history.any((h) {
-                  final historyKey = '${h['amount']}_${h['merchant']}_${(h['timestamp'] as DateTime).millisecondsSinceEpoch ~/ 60000}';
-                  return historyKey == transactionKey;
-                });
-                
-                // Check if this transaction is already in current transactions
-                final isInCurrent = _transactions.any((t) {
-                  final currentKey = '${t['amount']}_${t['merchant']}_${(t['timestamp'] as DateTime).millisecondsSinceEpoch ~/ 60000}';
-                  return currentKey == transactionKey;
-                });
-                
-                // Check if this transaction was cancelled/deleted
-                final isCancelled = _cancelledTransactions.any((c) {
-                  final cancelledKey = '${c['amount']}_${c['merchant']}_${(c['timestamp'] as DateTime).millisecondsSinceEpoch ~/ 60000}';
-                  return cancelledKey == transactionKey;
-                });
-                
-                if (!isInHistory && !isInCurrent && !isCancelled) {
-                  _transactions.insert(0, transaction);
-                  _nextId++;
-                }
-              }
-            }
-          }
-        });
-        // Sort transactions by timestamp (latest first)
-        _transactions.sort((a, b) => (b['timestamp'] as DateTime).compareTo(a['timestamp'] as DateTime));
-        _saveTransactions();
-      }
-    } catch (e) {
-      print('Error scanning today\'s SMS: $e');
-    }
-  }
-
-  Map<String, dynamic>? _parseTransactionFromSms(String? body, String? sender, DateTime? timeReceived) {
-    final text = body ?? '';
-
-    // Enhanced amount extraction for various formats
-    final amountRegex = RegExp(r'(?:INR|₹|Rs\.?|USD|\$)\s?(\d+(?:[.,]\d+)*)', caseSensitive: false);
-    final amountMatch = amountRegex.firstMatch(text);
-    if (amountMatch == null) return null;
-    
-    final amount = double.tryParse(amountMatch.group(1)!.replaceAll(',', '')) ?? 0.0;
-    if (amount <= 0) return null;
-
-    // Determine transaction type (debit/credit)
-    bool isDebited = false;
-    bool isCredited = false;
-    
-    // Check for debit keywords (more specific patterns first)
-    if (RegExp(r'\b(is paid from|paid from|debited from|debited|withdrawn|deducted|charged|purchase|payment|spent)\b', caseSensitive: false).hasMatch(text)) {
-      isDebited = true;
-    }
-    // Check for credit keywords
-    else if (RegExp(r'\b(is credited|credited|received|deposited|added|refund|cashback|reward)\b', caseSensitive: false).hasMatch(text)) {
-      isCredited = true;
-    }
-    
-    // If still unclear, look at sentence structure
-    if (!isDebited && !isCredited) {
-      // If amount comes before "from", it's likely a debit
-      // If amount comes after "from", it's likely a credit
-      final amountIndex = text.indexOf(amountMatch.group(0)!);
-      final fromIndex = text.toLowerCase().indexOf(' from ');
-      
-      if (fromIndex > 0) {
-        if (amountIndex < fromIndex) {
-          isDebited = true; // "INR 40.00 is paid from account" = debit
-        } else {
-          isCredited = true; // "credited for INR 2.00 from sender" = credit
-        }
-      } else {
-        isDebited = true; // Default to debit if unclear
-      }
-    }
-
-    // Extract account information
-    String fromAccount = 'Unknown';
-    String toAccount = 'Unknown';
-    String merchant = 'Unknown';
-
-    if (isDebited) {
-      // For debits: extract account and recipient
-      
-      // Extract account pattern: "from BANK account XXNUMBER" or "from BANK Acc XXNUMBER"
-      final accountPattern = RegExp(r'from\s+([A-Z]+)\s+(?:account|Acc)\s+([A-Z0-9]+)', caseSensitive: false);
-      final accountMatch = accountPattern.firstMatch(text);
-      
-      if (accountMatch != null) {
-        final bankName = accountMatch.group(1)!;
-        final accountNum = accountMatch.group(2)!;
-        fromAccount = '$bankName Account $accountNum';
-      }
-
-      // Extract recipient/merchant
-      // Pattern 1: "to MERCHANT NAME on date"
-      final recipientPattern1 = RegExp(r'to\s+([^0-9]+?)\s+on\s+\d', caseSensitive: false);
-      final recipientMatch1 = recipientPattern1.firstMatch(text);
-      
-      if (recipientMatch1 != null) {
-        merchant = recipientMatch1.group(1)!.trim();
-      } else {
-        // Pattern 2: "to MERCHANT" (at end or before "with ref")
-        final recipientPattern2 = RegExp(r'to\s+([^0-9]+?)(?:\s+with\s+ref|\s* $)', caseSensitive: false);
-        final recipientMatch2 = recipientPattern2.firstMatch(text);
-        
-        if (recipientMatch2 != null) {
-          merchant = recipientMatch2.group(1)!.trim();
-        }
-      }
-      
-      toAccount = merchant;
-
-    } else if (isCredited) {
-      // For credits: extract account and sender
-      
-      // Extract account pattern
-      final accountPattern = RegExp(r'(?:Your\s+)?([A-Z]+)\s+(?:account|Acc)\s+([A-Z0-9]+)', caseSensitive: false);
-      final accountMatch = accountPattern.firstMatch(text);
-      
-      if (accountMatch != null) {
-        final bankName = accountMatch.group(1)!;
-        final accountNum = accountMatch.group(2)!;
-        toAccount = '$bankName Account $accountNum';
-      }
-
-      // Extract sender
-      // Pattern 1: "from sendername@bank"
-      final senderPattern1 = RegExp(r'from\s+([^\.\s]+@[^\.\s]+)', caseSensitive: false);
-      final senderMatch1 = senderPattern1.firstMatch(text);
-      
-      if (senderMatch1 != null) {
-        merchant = senderMatch1.group(1)!.trim();
-        // Clean up UPI ID for display
-        merchant = merchant.replaceAll(RegExp(r'@[a-z]+ $'), ''); // Remove @bank suffix
-      } else {
-        // Pattern 2: "from SENDER NAME"
-        final senderPattern2 = RegExp(r'from\s+([^0-9]+?)(?:\s+on|\s+with|\.|$)', caseSensitive: false);
-        final senderMatch2 = senderPattern2.firstMatch(text);
-        
-        if (senderMatch2 != null) {
-          merchant = senderMatch2.group(1)!.trim();
-      }
-    }
-
-      fromAccount = merchant;
-    }
-
-    // Clean up merchant/sender names
-    if (merchant != 'Unknown') {
-      // Remove common UPI suffixes and clean up
-      merchant = merchant.replaceAll(RegExp(r'@[a-z]+$'), '');
-      merchant = merchant.replaceAll(RegExp(r'\s+'), ' ').trim();
-      
-      // Handle special cases
-      if (merchant.toLowerCase().contains('mr ') || merchant.toLowerCase().contains('ms ')) {
-        // Keep as is for person names
-      } else {
-        // Convert to title case for business names
-        merchant = _toTitleCase(merchant);
-      }
-    }
-
-    // Fallback values
-    if (fromAccount == 'Unknown') {
-      fromAccount = sender ?? 'Unknown Bank';
-    }
-    if (toAccount == 'Unknown') {
-      toAccount = merchant;
-    }
-
-    return {
-      'id': _nextId,
-      'amount': amount,
-      'merchant': merchant,
-      'fromAccount': fromAccount,
-      'toAccount': toAccount,
-      'timestamp': timeReceived ?? DateTime.now(),
-      'tag': null,
-      'isDebited': isDebited,
-    };
   }
 
   // Helper function to convert text to title case
@@ -1216,17 +959,10 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
             setState(() {
               _isRefreshingTransactions = true;
             });
-            
-            // Start both operations concurrently
-            final scanFuture = _scanTodaySms();
-            final newsFuture = _loadNews(isRefreshing: true);
-            
-            // Wait for both to complete
-            await Future.wait([scanFuture, newsFuture]);
-            
+            // Only refresh news, as SMS scan is no longer used
+            await _loadNews(isRefreshing: true);
             // Ensure minimum animation duration for better UX
             await Future.delayed(const Duration(milliseconds: 800));
-            
             setState(() {
               _isRefreshingTransactions = false;
             });
@@ -1670,7 +1406,7 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
               const SizedBox(height: 18),
               // Tagline/tip
               Text(
-                'Your SMS transactions are safe and private.',
+                'Your transaction notifications are safe and private.',
                 style: TextStyle(
                   fontSize: 13,
                   color: AppColors.textTertiary,
@@ -1744,8 +1480,8 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
                 children: [
                   _buildFeatureItem(
                     icon: Icons.sms,
-                    title: 'SMS Transaction Scanning',
-                    description: 'Automatically detects and categorizes your bank transactions from SMS messages',
+                    title: 'Notification Transaction Scanning',
+                    description: 'Automatically detects and categorizes your bank transactions from notifications',
                   ),
                   const SizedBox(height: 16),
                   _buildFeatureItem(
@@ -1772,6 +1508,38 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
                     description: 'Track your spending habits and get personalized financial recommendations',
                   ),
                 ],
+              ),
+              const SizedBox(height: 32),
+              // Notification access explanation and button
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: AppColors.surfaceLight,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Column(
+                  children: [
+                    Text(
+                      'To detect your transactions, Hance needs notification access. Tap below and enable Hance in the notification access settings.',
+                      style: TextStyle(fontSize: 14, color: AppColors.textPrimary),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 12),
+                    ElevatedButton.icon(
+                      onPressed: openNotificationAccessSettings,
+                      icon: Icon(Icons.notifications_active),
+                      label: Text('Enable Notification Access'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        elevation: 0,
+                      ),
+                    ),
+                  ],
+                ),
               ),
               const SizedBox(height: 32),
               // Continue button
@@ -1918,7 +1686,7 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
               const SizedBox(height: 18),
               // Tagline/tip
               Text(
-                'Your SMS transactions are safe and private.',
+                'Your transaction notifications are safe and private.',
                 style: TextStyle(
                   fontSize: 13,
                   color: AppColors.textTertiary,
@@ -3611,7 +3379,7 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
             ),
             const SizedBox(height: 16),
             Text(
-              'Your personal finance tracker powered by SMS.',
+              'Your personal finance tracker powered by notifications.',
               style: TextStyle(
                 fontSize: 15,
                 color: AppColors.textSecondary,
@@ -3623,7 +3391,7 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
             Divider(),
             const SizedBox(height: 8),
             Text(
-              'Hance automatically tracks your bank transactions from SMS and helps you manage your spending—all privately on your device.',
+              'Hance automatically tracks your bank transactions from notifications and helps you manage your spending—all privately on your device.',
               style: TextStyle(
                 fontSize: 13,
                 color: AppColors.textSecondary,
@@ -3774,5 +3542,136 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
         );
       },
     );
+  }
+
+  Map<String, dynamic>? _parseTransactionFromNotification(String? text, String? title, dynamic timestamp, String? packageName) {
+    // Use your existing SMS parsing logic, but adapt for notification text/title
+    if (text == null) return null;
+    // Copy and adapt the logic from _parseTransactionFromSms here
+    final amountRegex = RegExp(r'(?:INR|₹|Rs\.?|USD|\$)\s?(\d+(?:[.,]\d+)*)', caseSensitive: false);
+    final amountMatch = amountRegex.firstMatch(text);
+    if (amountMatch == null) return null;
+    final amount = double.tryParse(amountMatch.group(1)!.replaceAll(',', '')) ?? 0.0;
+    if (amount <= 0) return null;
+    bool isDebited = false;
+    bool isCredited = false;
+    if (RegExp(r'\b(is paid from|paid from|debited from|debited|withdrawn|deducted|charged|purchase|payment|spent)\b', caseSensitive: false).hasMatch(text)) {
+      isDebited = true;
+    } else if (RegExp(r'\b(is credited|credited|received|deposited|added|refund|cashback|reward)\b', caseSensitive: false).hasMatch(text)) {
+      isCredited = true;
+    }
+    if (!isDebited && !isCredited) {
+      final amountIndex = text.indexOf(amountMatch.group(0)!);
+      final fromIndex = text.toLowerCase().indexOf(' from ');
+      if (fromIndex > 0) {
+        if (amountIndex < fromIndex) {
+          isDebited = true;
+        } else {
+          isCredited = true;
+        }
+      } else {
+        isDebited = true;
+      }
+    }
+    String fromAccount = 'Unknown';
+    String toAccount = 'Unknown';
+    String merchant = 'Unknown';
+    if (isDebited) {
+      final accountPattern = RegExp(r'from\s+([A-Z]+)\s+(?:account|Acc)\s+([A-Z0-9]+)', caseSensitive: false);
+      final accountMatch = accountPattern.firstMatch(text);
+      if (accountMatch != null) {
+        final bankName = accountMatch.group(1)!;
+        final accountNum = accountMatch.group(2)!;
+        fromAccount = '$bankName Account $accountNum';
+      }
+      final recipientPattern1 = RegExp(r'to\s+([^0-9]+?)\s+on\s+\d', caseSensitive: false);
+      final recipientMatch1 = recipientPattern1.firstMatch(text);
+      if (recipientMatch1 != null) {
+        merchant = recipientMatch1.group(1)!.trim();
+      } else {
+        final recipientPattern2 = RegExp(r'to\s+([^0-9]+?)(?:\s+with\s+ref|\s* $)', caseSensitive: false);
+        final recipientMatch2 = recipientPattern2.firstMatch(text);
+        if (recipientMatch2 != null) {
+          merchant = recipientMatch2.group(1)!.trim();
+        }
+      }
+      toAccount = merchant;
+    } else if (isCredited) {
+      final accountPattern = RegExp(r'(?:Your\s+)?([A-Z]+)\s+(?:account|Acc)\s+([A-Z0-9]+)', caseSensitive: false);
+      final accountMatch = accountPattern.firstMatch(text);
+      if (accountMatch != null) {
+        final bankName = accountMatch.group(1)!;
+        final accountNum = accountMatch.group(2)!;
+        toAccount = '$bankName Account $accountNum';
+      }
+      final senderPattern1 = RegExp(r'from\s+([^\.\s]+@[^ \.\s]+)', caseSensitive: false);
+      final senderMatch1 = senderPattern1.firstMatch(text);
+      if (senderMatch1 != null) {
+        merchant = senderMatch1.group(1)!.trim();
+        merchant = merchant.replaceAll(RegExp(r'@[a-z]+\u0000$'), '');
+      } else {
+        final senderPattern2 = RegExp(r'from\s+([^0-9]+?)(?:\s+on|\s+with|\.|$)', caseSensitive: false);
+        final senderMatch2 = senderPattern2.firstMatch(text);
+        if (senderMatch2 != null) {
+          merchant = senderMatch2.group(1)!.trim();
+        }
+      }
+      fromAccount = merchant;
+    }
+    if (merchant != 'Unknown') {
+      merchant = merchant.replaceAll(RegExp(r'@[a-z]+$'), '');
+      merchant = merchant.replaceAll(RegExp(r'\s+'), ' ').trim();
+      if (merchant.toLowerCase().contains('mr ') || merchant.toLowerCase().contains('ms ')) {
+      } else {
+        merchant = _toTitleCase(merchant);
+      }
+    }
+    if (fromAccount == 'Unknown') {
+      fromAccount = title ?? packageName ?? 'Unknown Bank';
+    }
+    if (toAccount == 'Unknown') {
+      toAccount = merchant;
+    }
+    return {
+      'id': _nextId,
+      'amount': amount,
+      'merchant': merchant,
+      'fromAccount': fromAccount,
+      'toAccount': toAccount,
+      'timestamp': timestamp is int ? DateTime.fromMillisecondsSinceEpoch(timestamp) : DateTime.now(),
+      'tag': null,
+      'isDebited': isDebited,
+    };
+  }
+
+  List<Map<String, dynamic>> _convertFromStorage(List<dynamic> data) {
+    return data.map((item) {
+      final map = Map<String, dynamic>.from(item);
+      // Convert timestamp back to DateTime
+      if (map['timestamp'] is int) {
+        map['timestamp'] = DateTime.fromMillisecondsSinceEpoch(map['timestamp'] as int);
+      }
+      return map;
+    }).toList();
+  }
+
+  List<Map<String, dynamic>> _convertToStorage(List<Map<String, dynamic>> data) {
+    return data.map((item) {
+      final map = Map<String, dynamic>.from(item);
+      // Convert DateTime to milliseconds for storage
+      if (map['timestamp'] is DateTime) {
+        map['timestamp'] = (map['timestamp'] as DateTime).millisecondsSinceEpoch;
+      }
+      return map;
+    }).toList();
+  }
+}
+
+Future<void> openNotificationAccessSettings() async {
+  const platform = MethodChannel('notification_settings_channel');
+  try {
+    await platform.invokeMethod('openNotificationAccess');
+  } on PlatformException catch (e) {
+    print("Failed to open notification access settings: \\${e.message}");
   }
 }
