@@ -263,6 +263,9 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
   }
   List<int> get _monthOptions => List.generate(12, (i) => i + 1);
 
+  // Welcome message state
+  bool _showWelcomeMessage = false;
+
   @override
   void initState() {
     super.initState();
@@ -276,6 +279,13 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
     _loadData();
     _loadNews();
     _hasCompletedOnboarding = _transactionsBox.get('hasCompletedOnboarding', defaultValue: false);
+    
+    // Set welcome message for first-time users
+    if (!_hasCompletedOnboarding) {
+      _showWelcomeMessage = true;
+    } else {
+      _showWelcomeMessage = false;
+    }
     
     if (_hasCompletedOnboarding) {
       // Returning user - show scanning screen directly
@@ -362,6 +372,15 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
         }
       }
       _nextId = maxId + 1;
+
+      // If first-time user and transactions are found after scan, show welcome message once
+      if (_showWelcomeMessage && _transactions.isNotEmpty) {
+        Future.delayed(const Duration(seconds: 2), () {
+          setState(() {
+            _showWelcomeMessage = false;
+          });
+        });
+      }
     });
     
     // Load pending transactions from native storage
@@ -499,7 +518,7 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
 
   Map<String, dynamic>? _parseTransactionFromSms(String? body, String? sender, DateTime? timeReceived) {
     final text = body ?? '';
-    
+
     // Enhanced amount extraction for various formats
     final amountRegex = RegExp(r'(?:INR|₹|Rs\.?|USD|\$)\s?(\d+(?:[.,]\d+)*)', caseSensitive: false);
     final amountMatch = amountRegex.firstMatch(text);
@@ -556,7 +575,7 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
         final accountNum = accountMatch.group(2)!;
         fromAccount = '$bankName Account $accountNum';
       }
-      
+
       // Extract recipient/merchant
       // Pattern 1: "to MERCHANT NAME on date"
       final recipientPattern1 = RegExp(r'to\s+([^0-9]+?)\s+on\s+\d', caseSensitive: false);
@@ -575,7 +594,7 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
       }
       
       toAccount = merchant;
-      
+
     } else if (isCredited) {
       // For credits: extract account and sender
       
@@ -588,7 +607,7 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
         final accountNum = accountMatch.group(2)!;
         toAccount = '$bankName Account $accountNum';
       }
-      
+
       // Extract sender
       // Pattern 1: "from sendername@bank"
       final senderPattern1 = RegExp(r'from\s+([^\.\s]+@[^\.\s]+)', caseSensitive: false);
@@ -605,9 +624,9 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
         
         if (senderMatch2 != null) {
           merchant = senderMatch2.group(1)!.trim();
-        }
       }
-      
+    }
+
       fromAccount = merchant;
     }
 
@@ -1183,78 +1202,80 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
                           child: Container(
                             height: MediaQuery.of(context).size.height * 0.4,
                             child: Center(
-                              child: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Container(
-                                    padding: const EdgeInsets.all(20),
-                                    decoration: BoxDecoration(
-                                      color: AppColors.surface,
-                                      borderRadius: BorderRadius.circular(16),
-                                      boxShadow: [
-                                        BoxShadow(
-                                          color: Colors.black.withOpacity(0.04),
-                                          blurRadius: 8,
-                                          offset: const Offset(0, 2),
-                                        ),
-                                      ],
-                                      border: Border.all(
-                                        color: AppColors.surfaceLight,
-                                        width: 1.0,
-                                      ),
-                                    ),
-                                    child: Column(
+                              child: _showWelcomeMessage
+                                  ? _buildWelcomeMessage()
+                                  : Column(
                                       mainAxisSize: MainAxisSize.min,
+                                      mainAxisAlignment: MainAxisAlignment.center,
                                       children: [
-                                        Icon(
-                                          Icons.celebration,
-                                          size: 64,
-                                          color: AppColors.success,
-                                        ),
-                                        const SizedBox(height: 16),
-                                        Text(
-                                          'Congratulations!',
-                                          style: TextStyle(
-                                            fontSize: 20,
-                                            fontWeight: FontWeight.w700,
-                                            color: AppColors.textPrimary,
+                                        Container(
+                                          padding: const EdgeInsets.all(20),
+                                          decoration: BoxDecoration(
+                                            color: AppColors.surface,
+                                            borderRadius: BorderRadius.circular(16),
+                                            boxShadow: [
+                                              BoxShadow(
+                                                color: Colors.black.withOpacity(0.04),
+                                                blurRadius: 8,
+                                                offset: const Offset(0, 2),
+                                              ),
+                                            ],
+                                            border: Border.all(
+                                              color: AppColors.surfaceLight,
+                                              width: 1.0,
+                                            ),
                                           ),
-                                        ),
-                                        const SizedBox(height: 8),
-                                        Text(
-                                          'You have tracked all your expenses!',
-                                          style: TextStyle(
-                                            fontSize: 16,
-                                            color: AppColors.textSecondary,
-                                            fontWeight: FontWeight.w500,
+                                          child: Column(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              Icon(
+                                                Icons.celebration,
+                                                size: 64,
+                                                color: AppColors.success,
+                                              ),
+                                              const SizedBox(height: 16),
+                                              Text(
+                                                'Congratulations!',
+                                                style: TextStyle(
+                                                  fontSize: 20,
+                                                  fontWeight: FontWeight.w700,
+                                                  color: AppColors.textPrimary,
+                                                ),
+                                              ),
+                                              const SizedBox(height: 8),
+                                              Text(
+                                                'You have tracked all your expenses!',
+                                                style: TextStyle(
+                                                  fontSize: 16,
+                                                  color: AppColors.textSecondary,
+                                                  fontWeight: FontWeight.w500,
+                                                ),
+                                                textAlign: TextAlign.center,
+                                              ),
+                                              const SizedBox(height: 12),
+                                              Text(
+                                                'Stay financially responsible!',
+                                                style: TextStyle(
+                                                  fontSize: 14,
+                                                  color: AppColors.success,
+                                                  fontWeight: FontWeight.w600,
+                                                ),
+                                                textAlign: TextAlign.center,
+                                              ),
+                                              const SizedBox(height: 16),
+                                              Text(
+                                                'Pull down to refresh and check for new transactions',
+                                                style: TextStyle(
+                                                  fontSize: 12,
+                                                  color: AppColors.textTertiary,
+                                                ),
+                                                textAlign: TextAlign.center,
+                                              ),
+                                            ],
                                           ),
-                                          textAlign: TextAlign.center,
-                                        ),
-                                        const SizedBox(height: 12),
-                                        Text(
-                                          'Stay financially responsible!',
-                                          style: TextStyle(
-                                            fontSize: 14,
-                                            color: AppColors.success,
-                                            fontWeight: FontWeight.w600,
-                                          ),
-                                          textAlign: TextAlign.center,
-                                        ),
-                                        const SizedBox(height: 16),
-                                        Text(
-                                          'Pull down to refresh and check for new transactions',
-                                          style: TextStyle(
-                                            fontSize: 12,
-                                            color: AppColors.textTertiary,
-                                          ),
-                                          textAlign: TextAlign.center,
                                         ),
                                       ],
                                     ),
-                                  ),
-                                ],
-                              ),
                             ),
                           ),
                         )
@@ -3181,5 +3202,87 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
     } catch (e) {
       return [];
     }
+  }
+
+  // Add a welcome message widget
+  Widget _buildWelcomeMessage() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 28),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(24),
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.04),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+          border: Border.all(
+            color: AppColors.surfaceLight,
+            width: 1.0,
+          ),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.handshake,
+                  size: 32,
+                  color: AppColors.primary,
+                ),
+                const SizedBox(width: 10),
+                Text(
+                  'Welcome to Hance!',
+                  style: TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.primary,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Your personal finance tracker powered by SMS.',
+              style: TextStyle(
+                fontSize: 15,
+                color: AppColors.textSecondary,
+                fontWeight: FontWeight.w500,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 18),
+            Divider(),
+            const SizedBox(height: 8),
+            Text(
+              'Hance automatically tracks your bank transactions from SMS and helps you manage your spending—all privately on your device.',
+              style: TextStyle(
+                fontSize: 13,
+                color: AppColors.textSecondary,
+                height: 1.5,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Pull down to scan for your first transactions!',
+              style: TextStyle(
+                fontSize: 13,
+                color: AppColors.textTertiary,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
