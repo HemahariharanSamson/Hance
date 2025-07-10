@@ -921,14 +921,14 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
                         ),
                       ),
                       const SizedBox(height: 2),
-                                                Text(
-                            tx['merchant'] ?? 'Unknown',
-                            style: TextStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w500,
+                      Text(
+                        tx['merchant'] ?? 'Unknown',
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w500,
                               color: AppColors.textSecondary,
-                            ),
-                          ),
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -1226,41 +1226,41 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
                 Expanded(
                   child: _transactions.isEmpty
                       ? Center(
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(
-                                Icons.receipt_long_outlined,
-                                size: 64,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.receipt_long_outlined,
+                  size: 64,
                                 color: AppColors.textTertiary,
-                              ),
-                              const SizedBox(height: 8),
-                              Text(
-                                'No new transactions.',
-                                style: TextStyle(
-                                  fontSize: 18,
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'No new transactions.',
+                  style: TextStyle(
+                    fontSize: 18,
                                   color: AppColors.textTertiary,
-                                ),
-                              ),
-                            ],
-                          ),
+                  ),
+                ),
+              ],
+            ),
                         )
                       : ListView(
-                          padding: const EdgeInsets.only(left: 0, right: 0, top: 0, bottom: 16),
-                          children: [
-                            Padding(
-                              padding: const EdgeInsets.fromLTRB(20, 12, 20, 2),
-                              child: Text(
-                                'Recent Transactions',
-                                style: TextStyle(
+              padding: const EdgeInsets.only(left: 0, right: 0, top: 0, bottom: 16),
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 12, 20, 2),
+                  child: Text(
+                    'Recent Transactions',
+                    style: TextStyle(
                                   fontSize: 16,
                                   fontWeight: FontWeight.w600,
                                   color: AppColors.textPrimary,
-                                  letterSpacing: 0.2,
-                                ),
-                              ),
-                            ),
+                      letterSpacing: 0.2,
+                    ),
+                  ),
+                ),
                             _isRefreshingTransactions
                                 ? Container(
                                     height: 320,
@@ -1268,7 +1268,7 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
                                       child: Column(
                                         mainAxisAlignment: MainAxisAlignment.center,
                                         children: [
-                                          SizedBox(
+                SizedBox(
                                             width: 40,
                                             height: 40,
                                             child: CircularProgressIndicator(
@@ -1291,87 +1291,87 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
                                   )
                                 : SizedBox(
                                     height: 320,
-                                    child: AnimatedBuilder(
-                                      animation: _shakeController,
-                                      builder: (context, child) {
-                                        final offset = _shakeController.isAnimating ? _shakeAnimation.value * (1 - 2 * (_shakeController.value % 0.5).floor()) : 0.0;
-                                        return Transform.translate(
-                                          offset: Offset(offset, 0),
-                                          child: CardSwiper(
-                                            key: ValueKey(_transactions.length),
-                                            cardsCount: _transactions.length,
-                                            numberOfCardsDisplayed: _transactions.length.clamp(1, 2),
-                                            isLoop: false,
-                                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 1),
+                  child: AnimatedBuilder(
+                    animation: _shakeController,
+                    builder: (context, child) {
+                      final offset = _shakeController.isAnimating ? _shakeAnimation.value * (1 - 2 * (_shakeController.value % 0.5).floor()) : 0.0;
+                      return Transform.translate(
+                        offset: Offset(offset, 0),
+                        child: CardSwiper(
+                          key: ValueKey(_transactions.length),
+                          cardsCount: _transactions.length,
+                          numberOfCardsDisplayed: _transactions.length.clamp(1, 2),
+                          isLoop: false,
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 1),
                                             // backCardOffset: const Offset(0, -15),
                                             scale: 0.80, // Add this - makes back card slightly smaller
                                             threshold: 50, // Add this - reduces swipe sensitivity for tighter feel
-                                            allowedSwipeDirection: const AllowedSwipeDirection.only(
-                                              left: true,
-                                              right: true,
-                                              up: false,
-                                              down: false,
-                                            ),
-                                            cardBuilder: (context, index, percentThresholdX, percentThresholdY) {
-                                              final tx = _transactions[index];
-                                              return _modernTransactionCard(tx);
-                                            },
-                                            onSwipe: (index, direction, CardSwiperDirection? swipeDirection) async {
-                                              if (index >= _transactions.length) {
-                                                return false;
-                                              }
-                                              final tx = _transactions[index];
-                                              final selected = _selectedAction[tx['id']];
-                                              if (swipeDirection == CardSwiperDirection.left) {
-                                                if (selected == null || selected == 'Delete') {
-                                                  ScaffoldMessenger.of(context).showSnackBar(
-                                                    const SnackBar(content: Text('Please select a category before swiping left!')),
-                                                  );
-                                                  _shakeController.forward(from: 0);
-                                                  return false;
-                                                } else {
-                                                  _tagTransaction(tx['id'], selected);
-                                                  setState(() {
-                                                    _selectedAction[tx['id']] = null;
-                                                  });
-                                                  return true;
-                                                }
-                                              } else if (swipeDirection == CardSwiperDirection.right) {
-                                                final confirmed = await showDialog<bool>(
-                                                  context: context,
-                                                  builder: (context) => AlertDialog(
-                                                    title: const Text('Delete Transaction'),
-                                                    content: Text('Are you sure you want to delete this transaction for ₹${tx['amount'].toStringAsFixed(2)}?'),
-                                                    actions: [
-                                                      TextButton(
-                                                        onPressed: () => Navigator.of(context).pop(false),
-                                                        child: const Text('No'),
-                                                      ),
-                                                      TextButton(
-                                                        onPressed: () => Navigator.of(context).pop(true),
-                                                        child: const Text('Yes'),
-                                                      ),
-                                                    ],
-                                                  ),
-                                                );
-                                                if (confirmed == true) {
-                                                  _cancelTransaction(tx['id']);
-                                                  setState(() {
-                                                    _selectedAction[tx['id']] = null;
-                                                  });
-                                                  return true;
-                                                } else {
-                                                  _shakeController.forward(from: 0);
-                                                  return false;
-                                                }
-                                              }
-                                              return true;
-                                            },
-                                          ),
-                                        );
-                                      },
+                          allowedSwipeDirection: const AllowedSwipeDirection.only(
+                            left: true,
+                            right: true,
+                            up: false,
+                            down: false,
+                          ),
+                          cardBuilder: (context, index, percentThresholdX, percentThresholdY) {
+                            final tx = _transactions[index];
+                            return _modernTransactionCard(tx);
+                          },
+                          onSwipe: (index, direction, CardSwiperDirection? swipeDirection) async {
+                            if (index >= _transactions.length) {
+                              return false;
+                            }
+                            final tx = _transactions[index];
+                            final selected = _selectedAction[tx['id']];
+                            if (swipeDirection == CardSwiperDirection.left) {
+                              if (selected == null || selected == 'Delete') {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(content: Text('Please select a category before swiping left!')),
+                                );
+                                _shakeController.forward(from: 0);
+                                return false;
+                              } else {
+                                _tagTransaction(tx['id'], selected);
+                                setState(() {
+                                  _selectedAction[tx['id']] = null;
+                                });
+                                return true;
+                              }
+                            } else if (swipeDirection == CardSwiperDirection.right) {
+                              final confirmed = await showDialog<bool>(
+                                context: context,
+                                builder: (context) => AlertDialog(
+                                  title: const Text('Delete Transaction'),
+                                  content: Text('Are you sure you want to delete this transaction for ₹${tx['amount'].toStringAsFixed(2)}?'),
+                                  actions: [
+                                    TextButton(
+                                      onPressed: () => Navigator.of(context).pop(false),
+                                      child: const Text('No'),
                                     ),
-                                  ),
+                                    TextButton(
+                                      onPressed: () => Navigator.of(context).pop(true),
+                                      child: const Text('Yes'),
+                                    ),
+                                  ],
+                                ),
+                              );
+                              if (confirmed == true) {
+                                _cancelTransaction(tx['id']);
+                                setState(() {
+                                  _selectedAction[tx['id']] = null;
+                                });
+                                                  return true;
+                              } else {
+                                _shakeController.forward(from: 0);
+                                                  return false;
+                              }
+                            }
+                            return true;
+                          },
+                        ),
+                      );
+                    },
+                  ),
+                ),
                           ],
                         ),
                 ),
@@ -1412,8 +1412,8 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
                                 ),
                               ),
                             ],
-                          ),
-                          const SizedBox(height: 8),
+                ),
+                const SizedBox(height: 8),
                           _isLoadingNews || _isRefreshingNews
                               ? Row(
                                   children: [
@@ -1432,45 +1432,45 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
                               : _newsData == null || _newsData!.isEmpty
                                   ? Text('No news available.', style: TextStyle(fontSize: 13, color: AppColors.textTertiary))
                                   : Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                crossAxisAlignment: CrossAxisAlignment.start,
                                       children: _newsData!.take(4).map((news) => Padding(
-                                        padding: const EdgeInsets.only(bottom: 6.0),
-                                        child: Row(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                          children: [
-                                            Padding(
-                                              padding: const EdgeInsets.only(top: 4.0),
-                                              child: Icon(Icons.circle, size: 7, color: AppColors.primary),
+                                  padding: const EdgeInsets.only(bottom: 6.0),
+                                  child: Row(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Padding(
+                                        padding: const EdgeInsets.only(top: 4.0),
+                                        child: Icon(Icons.circle, size: 7, color: AppColors.primary),
+                                      ),
+                                      const SizedBox(width: 7),
+                                      Expanded(
+                                        child: InkWell(
+                                          onTap: () async {
+                                            final url = news['url']!;
+                                            try {
+                                              await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+                                            } catch (e) {
+                                              ScaffoldMessenger.of(context).showSnackBar(
+                                                SnackBar(content: Text('Could not open the link.')),
+                                              );
+                                            }
+                                          },
+                                          child: Text(
+                                            news['title']!,
+                                            style: TextStyle(
+                                              fontSize: 13.5,
+                                              color: Colors.blue,
+                                              fontWeight: FontWeight.w500,
+                                              height: 1.3,
+                                              decoration: TextDecoration.underline,
                                             ),
-                                            const SizedBox(width: 7),
-                                            Expanded(
-                                              child: InkWell(
-                                                onTap: () async {
-                                                  final url = news['url']!;
-                                                  try {
-                                                    await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
-                                                  } catch (e) {
-                                                    ScaffoldMessenger.of(context).showSnackBar(
-                                                      SnackBar(content: Text('Could not open the link.')),
-                                                    );
-                                                  }
-                                                },
-                                                child: Text(
-                                                  news['title']!,
-                                                  style: TextStyle(
-                                                    fontSize: 13.5,
-                                                    color: Colors.blue,
-                                                    fontWeight: FontWeight.w500,
-                                                    height: 1.3,
-                                                    decoration: TextDecoration.underline,
-                                                  ),
-                                                ),
-                                              ),
-                                            ),
-                                          ],
+                                          ),
                                         ),
-                                      )).toList(),
-                                    ),
+                                      ),
+                                    ],
+                                  ),
+                                )).toList(),
+                          ),
                         ],
                       ),
                     ),
@@ -1518,7 +1518,7 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
               padding: const EdgeInsets.only(left: 0, right: 0, top: 0, bottom: 16),
               children: [
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 12, 20, 2),
+                  padding: const EdgeInsets.fromLTRB(20, 50, 20, 2),
                   child: Text(
                     'Deleted Transactions',
                     style: TextStyle(
@@ -1849,15 +1849,30 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
   Widget build(BuildContext context) {
     return Scaffold(
       resizeToAvoidBottomInset: false,
-      appBar: (_isLoading || _showOnboarding || _isScanning) ? null : AppBar(
-        title: Text(
-          'Hance',
-          style: TextStyle(
-            fontSize: 24,
-            fontWeight: FontWeight.w700,
-            letterSpacing: 1.2,
-            color: AppColors.textPrimary,
-            fontFamily: 'Roboto',
+      appBar: (_isLoading || _showOnboarding || _isScanning || _selectedIndex == 0 || _selectedIndex == 2) ? null : AppBar(
+        leading: Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: Image.asset(
+            'assets/icon/icon.png',
+            fit: BoxFit.contain,
+          ),
+        ),
+        title: Transform.translate(
+          offset: Offset(-20, 0), // Move text 20 pixels to the left
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'Hance',
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 1.2,
+                  color: AppColors.textPrimary,
+                  fontFamily: 'Roboto',
+                ),
+              ),
+            ],
           ),
         ),
         centerTitle: false,
@@ -2012,7 +2027,7 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
         children: [
           // Month navigation header
           Container(
-            padding: const EdgeInsets.fromLTRB(20, 24, 20, 8),
+            padding: const EdgeInsets.fromLTRB(20, 50, 20, 8),
             decoration: BoxDecoration(
               color: AppColors.surface,
               border: Border(
