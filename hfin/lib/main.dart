@@ -685,6 +685,10 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
       tx['tag'] = tag;
       _history.insert(0, Map<String, dynamic>.from(tx));
       _transactions.removeWhere((t) => t['id'] == id);
+      // Hide welcome message if all transactions are categorized
+      if (_showWelcomeMessage && _transactions.isEmpty) {
+        _showWelcomeMessage = false;
+      }
     });
     _saveTransactions();
     _saveHistory();
@@ -695,6 +699,10 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
       final cancelledTx = _transactions.firstWhere((t) => t['id'] == id);
       _cancelledTransactions.insert(0, Map<String, dynamic>.from(cancelledTx));
       _transactions.removeWhere((t) => t['id'] == id);
+      // Hide welcome message if all transactions are categorized/cancelled
+      if (_showWelcomeMessage && _transactions.isEmpty) {
+        _showWelcomeMessage = false;
+      }
     });
     _saveTransactions();
     _saveCancelledTransactions();
@@ -852,6 +860,24 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
     final isCredited = !isDebited;
     final tag = tx['tag'] as String?;
     final selected = _selectedAction[tx['id']];
+    // Define credited categories
+    final creditedCategories = [
+      {
+        'icon': FontAwesomeIcons.moneyCheckDollar,
+        'color': Color(0xFF2563eb), // Blue
+        'label': 'Salary',
+      },
+      {
+        'icon': FontAwesomeIcons.laptopCode,
+        'color': Color(0xFF10b981), // Green
+        'label': 'Freelance',
+      },
+      {
+        'icon': FontAwesomeIcons.rightLeft,
+        'color': Color(0xFF6366f1), // Indigo
+        'label': 'Transfer',
+      },
+    ];
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 6, horizontal: 20),
       decoration: BoxDecoration(
@@ -951,39 +977,55 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
-                  _buildCategoryActionButton(
-                    icon: FontAwesomeIcons.utensils,
-                    color: AppColors.food,
-                    label: 'Food',
-                    selected: selected == 'Food',
-                    onPressed: () {
-                      setState(() {
-                        _selectedAction[tx['id']] = 'Food';
-                      });
-                    },
-                  ),
-                  _buildCategoryActionButton(
-                    icon: FontAwesomeIcons.bolt,
-                    color: AppColors.utility,
-                    label: 'Utility',
-                    selected: selected == 'Utility',
-                    onPressed: () {
-                      setState(() {
-                        _selectedAction[tx['id']] = 'Utility';
-                      });
-                    },
-                  ),
-                  _buildCategoryActionButton(
-                    icon: FontAwesomeIcons.spa,
-                    color: AppColors.chill,
-                    label: 'Chill',
-                    selected: selected == 'Chill',
-                    onPressed: () {
-                      setState(() {
-                        _selectedAction[tx['id']] = 'Chill';
-                      });
-                    },
-                  ),
+                  if (isDebited) ...[
+                    _buildCategoryActionButton(
+                      icon: FontAwesomeIcons.utensils,
+                      color: AppColors.food,
+                      label: 'Food',
+                      selected: selected == 'Food',
+                      onPressed: () {
+                        setState(() {
+                          _selectedAction[tx['id']] = 'Food';
+                        });
+                      },
+                    ),
+                    _buildCategoryActionButton(
+                      icon: FontAwesomeIcons.bolt,
+                      color: AppColors.utility,
+                      label: 'Utility',
+                      selected: selected == 'Utility',
+                      onPressed: () {
+                        setState(() {
+                          _selectedAction[tx['id']] = 'Utility';
+                        });
+                      },
+                    ),
+                    _buildCategoryActionButton(
+                      icon: FontAwesomeIcons.spa,
+                      color: AppColors.chill,
+                      label: 'Chill',
+                      selected: selected == 'Chill',
+                      onPressed: () {
+                        setState(() {
+                          _selectedAction[tx['id']] = 'Chill';
+                        });
+                      },
+                    ),
+                  ] else ...[
+                    // Credited transaction: show Salary, Freelance, Transfer
+                    for (final cat in creditedCategories)
+                      _buildCategoryActionButton(
+                        icon: cat['icon'] as IconData,
+                        color: cat['color'] as Color,
+                        label: cat['label'] as String,
+                        selected: selected == cat['label'],
+                        onPressed: () {
+                          setState(() {
+                            _selectedAction[tx['id']] = cat['label'] as String;
+                          });
+                        },
+                      ),
+                  ],
                 ],
               ),
             ],
@@ -2040,14 +2082,32 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
     }).toList();
   }
 
-  double _getTotalForMonth(DateTime month) {
+  double _getTotalExpenseForMonth(DateTime month) {
     final monthTransactions = _getTransactionsForMonth(month);
-    return monthTransactions.fold(0.0, (sum, tx) => sum + (tx['amount'] as double));
+    return monthTransactions
+        .where((tx) => tx['isDebited'] == true)
+        .fold(0.0, (sum, tx) => sum + (tx['amount'] as double));
   }
 
-  double _getTotalForDay(DateTime day) {
+  double _getTotalIncomeForMonth(DateTime month) {
+    final monthTransactions = _getTransactionsForMonth(month);
+    return monthTransactions
+        .where((tx) => tx['isDebited'] == false)
+        .fold(0.0, (sum, tx) => sum + (tx['amount'] as double));
+  }
+
+  double _getTotalExpenseForDay(DateTime day) {
     final dayTransactions = _getTransactionsForDay(day);
-    return dayTransactions.fold(0.0, (sum, tx) => sum + (tx['amount'] as double));
+    return dayTransactions
+        .where((tx) => tx['isDebited'] == true)
+        .fold(0.0, (sum, tx) => sum + (tx['amount'] as double));
+  }
+
+  double _getTotalIncomeForDay(DateTime day) {
+    final dayTransactions = _getTransactionsForDay(day);
+    return dayTransactions
+        .where((tx) => tx['isDebited'] == false)
+        .fold(0.0, (sum, tx) => sum + (tx['amount'] as double));
   }
 
   Map<int, double> _getDailyTotalsForMonth(DateTime month) {
@@ -2065,7 +2125,8 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
   Widget _buildCalendarView() {
     final monthTransactions = _getTransactionsForMonth(_currentMonth);
     final dailyTotals = _getDailyTotalsForMonth(_currentMonth);
-    final monthTotal = _getTotalForMonth(_currentMonth);
+    final monthExpense = _getTotalExpenseForMonth(_currentMonth);
+    final monthIncome = _getTotalIncomeForMonth(_currentMonth);
     final isDark = false; // Always false since we removed dark mode
     
     return Container(
@@ -2108,13 +2169,30 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
                       ),
                     ),
                     const SizedBox(height: 2),
-                    Text(
-                      'Total: ₹${monthTotal.toStringAsFixed(2)}',
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: AppColors.primary,
-                        fontWeight: FontWeight.w600,
-                      ),
+                    Row(
+                      children: [
+                        Icon(Icons.arrow_upward, color: AppColors.error, size: 15),
+                        const SizedBox(width: 2),
+                        Text(
+                          'Expense: ₹${monthExpense.toStringAsFixed(2)}',
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: AppColors.error,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Icon(Icons.arrow_downward, color: AppColors.success, size: 15),
+                        const SizedBox(width: 2),
+                        Text(
+                          'Income: ₹${monthIncome.toStringAsFixed(2)}',
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: AppColors.success,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
@@ -2435,6 +2513,60 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
                 ),
               ),
             ),
+          // Income Analysis Chart (only show if no day is selected)
+          if (_selectedDay == null)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+              child: Container(
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  color: AppColors.surface,
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.04),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                  border: Border.all(
+                    color: AppColors.surfaceLight,
+                    width: 1.0,
+                  ),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(18.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(Icons.pie_chart, color: AppColors.success, size: 22),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Income Analysis',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.textPrimary,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      SizedBox(
+                        height: 180,
+                        child: _buildIncomePieChart(
+                          analysisType: _analysisType,
+                          year: _selectedYear,
+                          month: _selectedMonth,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
         ],
       ),
     );
@@ -2488,7 +2620,68 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
         value: value,
         title: '${category}\n${percent.toStringAsFixed(1)}%',
         radius: 60,
-        titleStyle: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Colors.white),
+        titleStyle: TextStyle(fontSize: 8, fontWeight: FontWeight.w600, color: Colors.white),
+        titlePositionPercentageOffset: 0.6,
+      ));
+      colorIdx++;
+    });
+    return PieChart(
+      PieChartData(
+        sections: sections,
+        centerSpaceRadius: 32,
+        sectionsSpace: 2,
+        borderData: FlBorderData(show: false),
+      ),
+    );
+  }
+
+  // Helper to build the pie chart for income analysis (credited)
+  Widget _buildIncomePieChart({required String analysisType, required int year, required int month}) {
+    List<Map<String, dynamic>> txs;
+    if (analysisType == 'Yearly') {
+      txs = _history.where((tx) {
+        final txDate = tx['timestamp'] as DateTime;
+        return txDate.year == year && tx['isDebited'] == false;
+      }).toList();
+    } else {
+      txs = _history.where((tx) {
+        final txDate = tx['timestamp'] as DateTime;
+        return txDate.year == year && txDate.month == month && tx['isDebited'] == false;
+      }).toList();
+    }
+    // Group by tag/category
+    final Map<String, double> categoryTotals = {};
+    for (final tx in txs) {
+      final tag = tx['tag'] ?? 'Other';
+      categoryTotals[tag] = (categoryTotals[tag] ?? 0) + (tx['amount'] as double);
+    }
+    final total = categoryTotals.values.fold(0.0, (a, b) => a + b);
+    if (categoryTotals.isEmpty || total == 0) {
+      return Center(
+        child: Text(
+          'No income data for this period.',
+          style: TextStyle(fontSize: 13, color: Colors.grey),
+        ),
+      );
+    }
+    final List<PieChartSectionData> sections = [];
+    final colors = [
+      Color(0xFF2563eb), // Salary
+      Color(0xFF10b981), // Freelance
+      Color(0xFF6366f1), // Transfer
+      AppColors.accent,
+      AppColors.primaryLight,
+      AppColors.secondaryLight,
+    ];
+    int colorIdx = 0;
+    categoryTotals.forEach((category, value) {
+      final percent = value / total * 100;
+      sections.add(PieChartSectionData(
+        color: colors[colorIdx % colors.length],
+        value: value,
+        title: '${category}\n${percent.toStringAsFixed(1)}%',
+        radius: 60,
+        titleStyle: TextStyle(fontSize: 8, fontWeight: FontWeight.w600, color: Colors.white),
         titlePositionPercentageOffset: 0.6,
       ));
       colorIdx++;
@@ -2505,7 +2698,8 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
 
   Widget _buildDayDetails(DateTime day) {
     final dayTransactions = _getTransactionsForDay(day);
-    final dayTotal = _getTotalForDay(day);
+    final dayExpense = _getTotalExpenseForDay(day);
+    final dayIncome = _getTotalIncomeForDay(day);
     
     return Container(
       color: AppColors.background,
@@ -2545,20 +2739,38 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
                     ),
                   ),
                 ),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: AppColors.primary.withOpacity(0.08),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Text(
-                    '₹${dayTotal.toStringAsFixed(2)}',
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.primary,
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(Icons.arrow_upward, color: AppColors.error, size: 15),
+                        const SizedBox(width: 2),
+                        Text(
+                          'Expense: ₹${dayExpense.toStringAsFixed(2)}',
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: AppColors.error,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
                     ),
-                  ),
+                    Row(
+                      children: [
+                        Icon(Icons.arrow_downward, color: AppColors.success, size: 15),
+                        const SizedBox(width: 2),
+                        Text(
+                          'Income: ₹${dayIncome.toStringAsFixed(2)}',
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: AppColors.success,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -2740,6 +2952,12 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
         return AppColors.utility;
       case 'Chill':
         return AppColors.chill;
+      case 'Salary':
+        return Color(0xFF2563eb); // Blue
+      case 'Freelance':
+        return Color(0xFF10b981); // Green
+      case 'Transfer':
+        return Color(0xFF6366f1); // Indigo
       default:
         return AppColors.textTertiary;
     }
