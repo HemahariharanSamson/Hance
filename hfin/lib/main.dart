@@ -215,6 +215,16 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
   bool _isLoading = true;
   String _loadingMessage = 'Initializing...';
   
+  // Scanning state
+  bool _isScanning = false;
+  String _scanningMessage = 'Scanning messages...';
+  
+  // Onboarding state
+  bool _showOnboarding = false;
+  
+  // Check if user has completed onboarding
+  bool _hasCompletedOnboarding = false;
+  
   // Cancelled transactions list
   List<Map<String, dynamic>> _cancelledTransactions = [];
   
@@ -256,13 +266,63 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
   @override
   void initState() {
     super.initState();
-    _selectedIndex = 1; // 0: history, 1: home, 2: cancelled, 3: plus
+    _selectedIndex = 1;
     _shakeController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 400),
     );
     _shakeAnimation = Tween<double>(begin: 0, end: 16).chain(CurveTween(curve: Curves.elasticIn)).animate(_shakeController);
-    _initApp();
+    _initStorage();
+    _loadData();
+    _loadNews();
+    _hasCompletedOnboarding = _transactionsBox.get('hasCompletedOnboarding', defaultValue: false);
+    
+    if (_hasCompletedOnboarding) {
+      // Returning user - show scanning screen directly
+      setState(() {
+        _isLoading = false;
+        _showOnboarding = false;
+        _isScanning = true;
+      });
+      _startScanningProcess();
+    } else {
+      // First-time user - show onboarding first
+      setState(() {
+        _isLoading = false;
+        _showOnboarding = true;
+        _isScanning = false;
+      });
+    }
+  }
+
+  Future<void> _startScanningProcess() async {
+    setState(() {
+      _scanningMessage = 'Scanning messages...';
+    });
+    
+    // Add delay for scanning animation
+    await Future.delayed(const Duration(milliseconds: 2000));
+    
+    setState(() {
+      _scanningMessage = 'Processing transactions...';
+    });
+    
+    // Initialize SMS listener and scan today's messages
+    await _initSmsListener();
+    
+    // Add delay for processing animation
+    await Future.delayed(const Duration(milliseconds: 1500));
+    
+    setState(() {
+      _scanningMessage = 'Setting up your dashboard...';
+    });
+    
+    // Final delay
+    await Future.delayed(const Duration(milliseconds: 1000));
+    
+    setState(() {
+      _isScanning = false;
+    });
   }
 
   @override
@@ -271,34 +331,7 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
     super.dispose();
   }
 
-  void _initApp() async {
-    setState(() {
-      _loadingMessage = 'Initializing storage...';
-    });
-    
-    // Add delay to show the initial message
-    await Future.delayed(const Duration(milliseconds: 800));
-    
-    _initStorage();
-    _loadData();
-    await _loadNews(); // Load news once during initialization
-    
-    setState(() {
-      _loadingMessage = 'Scanning SMS messages...';
-    });
-    
-    // Add delay to show the scanning message
-    await Future.delayed(const Duration(milliseconds: 1200));
-    
-    await _initSmsListener();
-    
-    // Add final delay before hiding splash screen
-    await Future.delayed(const Duration(milliseconds: 500));
-    
-    setState(() {
-      _isLoading = false;
-    });
-  }
+
 
   void _initStorage() {
     _transactionsBox = Hive.box('transactions');
@@ -562,46 +595,94 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
   Map<String, dynamic>? _parseTransactionFromSms(String? body, String? sender, DateTime? timeReceived) {
     final text = body ?? '';
 
-    // Amount extraction (INR/₹/Rs)
-    final amountRegex = RegExp(r'(?:₹|Rs\.?|INR)\s?(\d+[.,]?\d*)');
+    // Enhanced amount extraction for various formats
+    final amountRegex = RegExp(r'(?:₹|Rs\.?|INR|Rs\.?|Rs)\s?(\d+(?:[.,]\d+)*)');
     final amountMatch = amountRegex.firstMatch(text);
     if (amountMatch == null) return null;
     final amount = double.tryParse(amountMatch.group(1)!.replaceAll(',', '')) ?? 0.0;
 
-    // Transaction type detection
+    // Enhanced transaction type detection for Indian banks
     bool isDebited = false;
     bool isCredited = false;
-    if (RegExp(r'\b(debited|paid from|is paid from)\b', caseSensitive: false).hasMatch(text)) {
+    
+    // Check for debit keywords
+    if (RegExp(r'\b(debited|paid from|is paid from|spent|withdrawn|deducted|charged|purchase|payment)\b', caseSensitive: false).hasMatch(text)) {
       isDebited = true;
-    } else if (RegExp(r'\b(credited|is credited|is credited for)\b', caseSensitive: false).hasMatch(text)) {
+    }
+    // Check for credit keywords
+    else if (RegExp(r'\b(credited|is credited|is credited for|received|deposited|added|refund|cashback|reward)\b', caseSensitive: false).hasMatch(text)) {
       isCredited = true;
     }
     // Default to debited if not clear
     if (!isDebited && !isCredited) isDebited = true;
 
-    // Extract 'from' and 'to' for both types
+    // Extract merchant and account information
     String? fromAccount;
     String? toAccount;
     String merchant = 'Unknown';
 
+    // Common Indian bank SMS patterns
     if (isDebited) {
-      // e.g. "is paid from HSBC account XX423006 to Mr PRABHU  A"
-      final fromRegex = RegExp(r'paid from ([^ ]+(?: [^ ]+)*?) to', caseSensitive: false);
-      final toRegex = RegExp(r'to ([^\.\n]+?)(?: on| with| for|\.|$)', caseSensitive: false);
-      fromAccount = fromRegex.firstMatch(text)?.group(1)?.trim();
-      toAccount = toRegex.firstMatch(text)?.group(1)?.trim();
-      merchant = toAccount ?? 'Unknown';
+      // Pattern 1: "Rs.500 debited from A/c XX1234 on 01/01/2024 at 10:30 AM. Available balance: Rs.10000"
+      final pattern1 = RegExp(r'(?:Rs\.?|₹|INR)\s?\d+(?:[.,]\d+)*\s+debited\s+from\s+(?:A/c|Account)\s+([A-Z0-9]+)', caseSensitive: false);
+      final match1 = pattern1.firstMatch(text);
+      if (match1 != null) {
+        fromAccount = 'Account ${match1.group(1)}';
+      }
+
+      // Pattern 2: "Your A/c XX1234 debited Rs.500 on 01/01/2024 at 10:30 AM"
+      final pattern2 = RegExp(r'Your\s+(?:A/c|Account)\s+([A-Z0-9]+)\s+debited', caseSensitive: false);
+      final match2 = pattern2.firstMatch(text);
+      if (match2 != null) {
+        fromAccount = 'Account ${match2.group(1)}';
+      }
+
+      // Pattern 3: "Rs.500 debited from A/c XX1234 for payment to MERCHANT NAME"
+      final pattern3 = RegExp(r'for\s+(?:payment\s+to|purchase\s+at|transaction\s+at)\s+([A-Za-z0-9\s]+?)(?:\s+on|\s+at|\.|$)', caseSensitive: false);
+      final match3 = pattern3.firstMatch(text);
+      if (match3 != null) {
+        merchant = match3.group(1)?.trim() ?? 'Unknown';
+      }
+
+      // Pattern 4: "UPI transaction of Rs.500 to MERCHANT@BANK"
+      final pattern4 = RegExp(r'UPI\s+transaction\s+of\s+(?:Rs\.?|₹|INR)\s?\d+(?:[.,]\d+)*\s+to\s+([A-Za-z0-9@]+)', caseSensitive: false);
+      final match4 = pattern4.firstMatch(text);
+      if (match4 != null) {
+        merchant = match4.group(1)?.trim() ?? 'Unknown';
+      }
+
     } else if (isCredited) {
-      // e.g. "is credited for INR 2.00 on ... from qmadhihafathima@okaxis"
-      final toRegex = RegExp(r'(?:Your |the )?([A-Za-z ]*Acc(?:ount)? [A-Za-z0-9]+) is credited', caseSensitive: false);
-      final fromRegex = RegExp(r'from ([^ .]+)', caseSensitive: false);
-      toAccount = toRegex.firstMatch(text)?.group(1)?.trim();
-      fromAccount = fromRegex.firstMatch(text)?.group(1)?.trim();
-      merchant = fromAccount ?? 'Unknown';
+      // Pattern 1: "Rs.500 credited to A/c XX1234 on 01/01/2024 at 10:30 AM"
+      final pattern1 = RegExp(r'(?:Rs\.?|₹|INR)\s?\d+(?:[.,]\d+)*\s+credited\s+to\s+(?:A/c|Account)\s+([A-Z0-9]+)', caseSensitive: false);
+      final match1 = pattern1.firstMatch(text);
+      if (match1 != null) {
+        toAccount = 'Account ${match1.group(1)}';
+      }
+
+      // Pattern 2: "Your A/c XX1234 credited Rs.500 on 01/01/2024 at 10:30 AM"
+      final pattern2 = RegExp(r'Your\s+(?:A/c|Account)\s+([A-Z0-9]+)\s+credited', caseSensitive: false);
+      final match2 = pattern2.firstMatch(text);
+      if (match2 != null) {
+        toAccount = 'Account ${match2.group(1)}';
+      }
+
+      // Pattern 3: "Rs.500 credited from SENDER NAME"
+      final pattern3 = RegExp(r'(?:credited|received)\s+from\s+([A-Za-z0-9\s]+?)(?:\s+on|\s+at|\.|$)', caseSensitive: false);
+      final match3 = pattern3.firstMatch(text);
+      if (match3 != null) {
+        merchant = match3.group(1)?.trim() ?? 'Unknown';
+      }
     }
+
     // Fallbacks
     fromAccount ??= sender ?? 'Unknown';
     toAccount ??= merchant;
+
+    // Clean up merchant name
+    if (merchant != 'Unknown') {
+      merchant = merchant.replaceAll(RegExp(r'@[A-Za-z]+$'), ''); // Remove UPI bank suffix
+      merchant = merchant.replaceAll(RegExp(r'\s+'), ' ').trim(); // Clean extra spaces
+    }
 
     return {
       'id': _nextId,
@@ -1116,29 +1197,6 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
         );
       case 1:
         // Home: show transaction cards
-        if (_transactions.isEmpty) {
-          return Center(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  Icons.receipt_long_outlined,
-                  size: 64,
-                  color: AppColors.textTertiary,
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'No new transactions.',
-                  style: TextStyle(
-                    fontSize: 18,
-                    color: AppColors.textTertiary,
-                  ),
-                ),
-              ],
-            ),
-          );
-        }
         return RefreshIndicator(
           onRefresh: () async {
             setState(() {
@@ -1162,135 +1220,164 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
           child: SafeArea(
             top: false,
             bottom: false,
-            child: ListView(
-              padding: const EdgeInsets.only(left: 0, right: 0, top: 0, bottom: 16),
+            child: Column(
               children: [
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 12, 20, 2),
-                  child: Text(
-                    'Recent Transactions',
-                    style: TextStyle(
-                      fontSize: 16, // Reduced from 22
-                      fontWeight: FontWeight.w600, // Slightly less bold
-                      color: AppColors.textPrimary,
-                      letterSpacing: 0.2,
-                    ),
-                  ),
-                ),
-                _isRefreshingTransactions
-                    ? Container(
-                        height: 320,
-                        child: Center(
+                // Transactions section
+                Expanded(
+                  child: _transactions.isEmpty
+                      ? Center(
                           child: Column(
+                            mainAxisSize: MainAxisSize.min,
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              SizedBox(
-                                width: 40,
-                                height: 40,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 3,
-                                  valueColor: AlwaysStoppedAnimation(AppColors.primary),
-                                ),
+                              Icon(
+                                Icons.receipt_long_outlined,
+                                size: 64,
+                                color: AppColors.textTertiary,
                               ),
-                              const SizedBox(height: 16),
+                              const SizedBox(height: 8),
                               Text(
-                                'Refreshing transactions...',
+                                'No new transactions.',
                                 style: TextStyle(
-                                  fontSize: 16,
-                                  color: AppColors.textSecondary,
-                                  fontWeight: FontWeight.w500,
+                                  fontSize: 18,
+                                  color: AppColors.textTertiary,
                                 ),
                               ),
                             ],
                           ),
-                        ),
-                      )
-                    : SizedBox(
-                        height: 320, // Adjust as needed for card height
-                        child: AnimatedBuilder(
-                          animation: _shakeController,
-                          builder: (context, child) {
-                            final offset = _shakeController.isAnimating ? _shakeAnimation.value * (1 - 2 * (_shakeController.value % 0.5).floor()) : 0.0;
-                            return Transform.translate(
-                              offset: Offset(offset, 0),
-                              child: CardSwiper(
-                                key: ValueKey(_transactions.length),
-                                cardsCount: _transactions.length,
-                                numberOfCardsDisplayed: _transactions.length.clamp(1, 2),
-                                isLoop: false,
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 1),
-                                allowedSwipeDirection: const AllowedSwipeDirection.only(
-                                  left: true,
-                                  right: true,
-                                  up: false,
-                                  down: false,
+                        )
+                      : ListView(
+                          padding: const EdgeInsets.only(left: 0, right: 0, top: 0, bottom: 16),
+                          children: [
+                            Padding(
+                              padding: const EdgeInsets.fromLTRB(20, 12, 20, 2),
+                              child: Text(
+                                'Recent Transactions',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                  color: AppColors.textPrimary,
+                                  letterSpacing: 0.2,
                                 ),
-                                cardBuilder: (context, index, percentThresholdX, percentThresholdY) {
-                                  final tx = _transactions[index];
-                                  return _modernTransactionCard(tx);
-                                },
-                                onSwipe: (index, direction, CardSwiperDirection? swipeDirection) async {
-                                  // Check if index is still valid after potential previous deletions
-                                  if (index >= _transactions.length) {
-                                    return false;
-                                  }
-                                  final tx = _transactions[index];
-                                  final selected = _selectedAction[tx['id']];
-                                  if (swipeDirection == CardSwiperDirection.left) {
-                                    // Left swipe: require category selection
-                                    if (selected == null || selected == 'Delete') {
-                                      ScaffoldMessenger.of(context).showSnackBar(
-                                        const SnackBar(content: Text('Please select a category before swiping left!')),
-                                      );
-                                      _shakeController.forward(from: 0);
-                                      return false;
-                                    } else {
-                                      _tagTransaction(tx['id'], selected);
-                                      setState(() {
-                                        _selectedAction[tx['id']] = null;
-                                      });
-                                      return true;
-                                    }
-                                  } else if (swipeDirection == CardSwiperDirection.right) {
-                                    // Right swipe: ask for confirmation
-                                    final confirmed = await showDialog<bool>(
-                                      context: context,
-                                      builder: (context) => AlertDialog(
-                                        title: const Text('Delete Transaction'),
-                                        content: Text('Are you sure you want to delete this transaction for ₹${tx['amount'].toStringAsFixed(2)}?'),
-                                        actions: [
-                                          TextButton(
-                                            onPressed: () => Navigator.of(context).pop(false),
-                                            child: const Text('No'),
+                              ),
+                            ),
+                            _isRefreshingTransactions
+                                ? Container(
+                                    height: 320,
+                                    child: Center(
+                                      child: Column(
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        children: [
+                                          SizedBox(
+                                            width: 40,
+                                            height: 40,
+                                            child: CircularProgressIndicator(
+                                              strokeWidth: 3,
+                                              valueColor: AlwaysStoppedAnimation(AppColors.primary),
+                                            ),
                                           ),
-                                          TextButton(
-                                            onPressed: () => Navigator.of(context).pop(true),
-                                            child: const Text('Yes'),
+                                          const SizedBox(height: 16),
+                                          Text(
+                                            'Refreshing transactions...',
+                                            style: TextStyle(
+                                              fontSize: 16,
+                                              color: AppColors.textSecondary,
+                                              fontWeight: FontWeight.w500,
+                                            ),
                                           ),
                                         ],
                                       ),
-                                    );
-                                    if (confirmed == true) {
-                                      _cancelTransaction(tx['id']);
-                                      setState(() {
-                                        _selectedAction[tx['id']] = null;
-                                      });
-                                      return true; // allow swipe
-                                    } else {
-                                      _shakeController.forward(from: 0);
-                                      return false; // prevent swipe
-                                    }
-                                  }
-                                  return true;
-                                },
-                              ),
-                            );
-                          },
+                                    ),
+                                  )
+                                : SizedBox(
+                                    height: 320,
+                                    child: AnimatedBuilder(
+                                      animation: _shakeController,
+                                      builder: (context, child) {
+                                        final offset = _shakeController.isAnimating ? _shakeAnimation.value * (1 - 2 * (_shakeController.value % 0.5).floor()) : 0.0;
+                                        return Transform.translate(
+                                          offset: Offset(offset, 0),
+                                          child: CardSwiper(
+                                            key: ValueKey(_transactions.length),
+                                            cardsCount: _transactions.length,
+                                            numberOfCardsDisplayed: _transactions.length.clamp(1, 2),
+                                            isLoop: false,
+                                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 1),
+                                            // backCardOffset: const Offset(0, -15),
+                                            scale: 0.80, // Add this - makes back card slightly smaller
+                                            threshold: 50, // Add this - reduces swipe sensitivity for tighter feel
+                                            allowedSwipeDirection: const AllowedSwipeDirection.only(
+                                              left: true,
+                                              right: true,
+                                              up: false,
+                                              down: false,
+                                            ),
+                                            cardBuilder: (context, index, percentThresholdX, percentThresholdY) {
+                                              final tx = _transactions[index];
+                                              return _modernTransactionCard(tx);
+                                            },
+                                            onSwipe: (index, direction, CardSwiperDirection? swipeDirection) async {
+                                              if (index >= _transactions.length) {
+                                                return false;
+                                              }
+                                              final tx = _transactions[index];
+                                              final selected = _selectedAction[tx['id']];
+                                              if (swipeDirection == CardSwiperDirection.left) {
+                                                if (selected == null || selected == 'Delete') {
+                                                  ScaffoldMessenger.of(context).showSnackBar(
+                                                    const SnackBar(content: Text('Please select a category before swiping left!')),
+                                                  );
+                                                  _shakeController.forward(from: 0);
+                                                  return false;
+                                                } else {
+                                                  _tagTransaction(tx['id'], selected);
+                                                  setState(() {
+                                                    _selectedAction[tx['id']] = null;
+                                                  });
+                                                  return true;
+                                                }
+                                              } else if (swipeDirection == CardSwiperDirection.right) {
+                                                final confirmed = await showDialog<bool>(
+                                                  context: context,
+                                                  builder: (context) => AlertDialog(
+                                                    title: const Text('Delete Transaction'),
+                                                    content: Text('Are you sure you want to delete this transaction for ₹${tx['amount'].toStringAsFixed(2)}?'),
+                                                    actions: [
+                                                      TextButton(
+                                                        onPressed: () => Navigator.of(context).pop(false),
+                                                        child: const Text('No'),
+                                                      ),
+                                                      TextButton(
+                                                        onPressed: () => Navigator.of(context).pop(true),
+                                                        child: const Text('Yes'),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                );
+                                                if (confirmed == true) {
+                                                  _cancelTransaction(tx['id']);
+                                                  setState(() {
+                                                    _selectedAction[tx['id']] = null;
+                                                  });
+                                                  return true;
+                                                } else {
+                                                  _shakeController.forward(from: 0);
+                                                  return false;
+                                                }
+                                              }
+                                              return true;
+                                            },
+                                          ),
+                                        );
+                                      },
+                                    ),
+                                  ),
+                          ],
                         ),
-                      ),
-                // News Container (now below cards)
+                ),
+                // News Container (always visible)
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical:30),
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 0),
                   child: Container(
                     decoration: BoxDecoration(
                       color: AppColors.surface,
@@ -1325,8 +1412,8 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
                                 ),
                               ),
                             ],
-                ),
-                const SizedBox(height: 8),
+                          ),
+                          const SizedBox(height: 8),
                           _isLoadingNews || _isRefreshingNews
                               ? Row(
                                   children: [
@@ -1383,7 +1470,7 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
                                           ],
                                         ),
                                       )).toList(),
-                                                                         ),
+                                    ),
                         ],
                       ),
                     ),
@@ -1442,7 +1529,7 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
                     ),
                   ),
                 ),
-                ..._cancelledTransactions.map((tx) => _deletedTransactionCard(tx)).toList(),
+                ..._buildGroupedDeletedTransactions(),
                 const SizedBox(height: 16),
               ],
             ),
@@ -1524,11 +1611,245 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
     );
   }
 
+  Widget _buildOnboardingScreen() {
+    return Container(
+      color: AppColors.background,
+      child: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            children: [
+              // Header
+              SizedBox(
+                height: 200,
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    // App icon
+                    Container(
+                      width: 100,
+                      height: 100,
+                      decoration: BoxDecoration(
+                        color: AppColors.primary.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(25),
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.all(16.0),
+                        child: Image.asset(
+                          'assets/icon/icon.png',
+                          fit: BoxFit.contain,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    Text(
+                      'Welcome to Hance',
+                      style: TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.textPrimary,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Your Personal Finance Tracker',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: AppColors.textSecondary,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              // Features
+              Column(
+                children: [
+                  _buildFeatureItem(
+                    icon: Icons.sms,
+                    title: 'SMS Transaction Scanning',
+                    description: 'Automatically detects and categorizes your bank transactions from SMS messages',
+                  ),
+                  const SizedBox(height: 16),
+                  _buildFeatureItem(
+                    icon: Icons.analytics,
+                    title: 'Smart Analytics',
+                    description: 'Get insights into your spending patterns with detailed charts and reports',
+                  ),
+                  const SizedBox(height: 16),
+                  _buildFeatureItem(
+                    icon: Icons.security,
+                    title: 'Privacy First',
+                    description: 'All data stays on your device. We never access your personal information',
+                  ),
+                ],
+              ),
+              const SizedBox(height: 32),
+              // Continue button
+              SizedBox(
+                width: double.infinity,
+                height: 50,
+                child: ElevatedButton(
+                  onPressed: () {
+                    _transactionsBox.put('hasCompletedOnboarding', true);
+                    setState(() {
+                      _showOnboarding = false;
+                      _hasCompletedOnboarding = true;
+                      _isScanning = true;
+                    });
+                    _startScanningProcess();
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    elevation: 0,
+                  ),
+                  child: Text(
+                    'Continue',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFeatureItem({
+    required IconData icon,
+    required String title,
+    required String description,
+  }) {
+    return Row(
+      children: [
+        Container(
+          width: 48,
+          height: 48,
+          decoration: BoxDecoration(
+            color: AppColors.primary.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Icon(
+            icon,
+            color: AppColors.primary,
+            size: 24,
+          ),
+        ),
+        const SizedBox(width: 16),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.textPrimary,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                description,
+                style: TextStyle(
+                  fontSize: 14,
+                  color: AppColors.textSecondary,
+                  height: 1.4,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildScanningScreen() {
+    return Container(
+      color: AppColors.background,
+      child: SafeArea(
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Modern illustration
+              Padding(
+                padding: const EdgeInsets.only(bottom: 32.0),
+                child: SizedBox(
+                  height: 180,
+                  child: Image.asset(
+                    'assets/icon/sms_scan.png',
+                    fit: BoxFit.contain,
+                  ),
+                ),
+              ),
+              // App Title
+              Text(
+                'Hance',
+                style: TextStyle(
+                  fontSize: 38,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 2.5,
+                  color: AppColors.primary,
+                  fontFamily: 'Roboto',
+                ),
+              ),
+              const SizedBox(height: 32),
+              // Linear progress bar
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 48.0),
+                child: LinearProgressIndicator(
+                  valueColor: const AlwaysStoppedAnimation<Color>(AppColors.primary),
+                  backgroundColor: AppColors.primary.withOpacity(0.13),
+                  minHeight: 6,
+                ),
+              ),
+              const SizedBox(height: 24),
+              // Scanning message
+              Text(
+                _scanningMessage,
+                style: TextStyle(
+                  fontSize: 15,
+                  color: AppColors.textSecondary,
+                  fontWeight: FontWeight.w500,
+                  letterSpacing: 0.2,
+                ),
+              ),
+              const SizedBox(height: 18),
+              // Tagline/tip
+              Text(
+                'Your SMS transactions are safe and private.',
+                style: TextStyle(
+                  fontSize: 13,
+                  color: AppColors.textTertiary,
+                  fontWeight: FontWeight.w400,
+                  fontStyle: FontStyle.italic,
+                  letterSpacing: 0.1,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       resizeToAvoidBottomInset: false,
-      appBar: _isLoading ? null : AppBar(
+      appBar: (_isLoading || _showOnboarding || _isScanning) ? null : AppBar(
         title: Text(
           'Hance',
           style: TextStyle(
@@ -1542,14 +1863,19 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
         centerTitle: false,
         elevation: 0,
         backgroundColor: AppColors.surface,
-
       ),
       body: SafeArea(
         top: false,
-        bottom: false, // Changed from true to false - let bottom nav handle it
-        child: _isLoading ? _buildSplashScreen() : _getBody(),
+        bottom: false,
+        child: _isLoading 
+            ? _buildSplashScreen() 
+            : _showOnboarding 
+                ? _buildOnboardingScreen() 
+                : _isScanning
+                    ? _buildScanningScreen()
+                    : _getBody(),
       ),
-      bottomNavigationBar: _isLoading ? null : BottomAppBar(
+      bottomNavigationBar: (_isLoading || _showOnboarding || _isScanning) ? null : BottomAppBar(
         height: 70, // Increased from 60 to 70
         padding: EdgeInsets.zero,
         color: AppColors.surface,
@@ -2295,6 +2621,194 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
     } else {
       return '${_getMonthName(month)} ${day}, $year';
     }
+  }
+
+  List<Widget> _buildGroupedDeletedTransactions() {
+    final grouped = _getGroupedDeletedTransactions();
+    final widgets = <Widget>[];
+    
+    // Sort months in descending order (newest first)
+    final sortedMonths = grouped.keys.toList()..sort((a, b) => b.compareTo(a));
+    
+    for (final monthKey in sortedMonths) {
+      final monthData = grouped[monthKey]!;
+      final isMonthExpanded = _expandedDeletedGroups.contains(monthKey);
+      
+      // Calculate total for the month
+      double monthTotal = 0;
+      for (final dayTransactions in monthData.values) {
+        for (final tx in dayTransactions) {
+          monthTotal += tx['amount'] as double;
+        }
+      }
+      
+      // Month header
+      widgets.add(
+        Container(
+          margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+          decoration: BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: BorderRadius.circular(12),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.grey.withOpacity(0.07),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              ),
+            ],
+            border: Border.all(
+              color: AppColors.surfaceLight,
+              width: 1,
+            ),
+          ),
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              borderRadius: BorderRadius.circular(12),
+              onTap: () {
+                setState(() {
+                  if (isMonthExpanded) {
+                    _expandedDeletedGroups.remove(monthKey);
+                  } else {
+                    _expandedDeletedGroups.add(monthKey);
+                  }
+                });
+              },
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Row(
+                  children: [
+                    Icon(
+                      isMonthExpanded ? Icons.expand_less : Icons.expand_more,
+                      color: AppColors.primary,
+                      size: 24,
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            _getMonthDisplayName(monthKey),
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.textPrimary,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            '${monthData.length} days • ₹${monthTotal.toStringAsFixed(2)}',
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: AppColors.textSecondary,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      
+      // Day groups (only if month is expanded)
+      if (isMonthExpanded) {
+        // Sort days in descending order (newest first)
+        final sortedDays = monthData.keys.toList()..sort((a, b) => b.compareTo(a));
+        
+        for (final dayKey in sortedDays) {
+          final dayTransactions = monthData[dayKey]!;
+          final isDayExpanded = _expandedDeletedGroups.contains(dayKey);
+          
+          // Calculate total for the day
+          double dayTotal = 0;
+          for (final tx in dayTransactions) {
+            dayTotal += tx['amount'] as double;
+          }
+          
+          // Day header
+          widgets.add(
+            Container(
+              margin: const EdgeInsets.symmetric(horizontal: 32, vertical: 4),
+              decoration: BoxDecoration(
+                color: AppColors.surfaceLight.withOpacity(0.3),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                  color: AppColors.surfaceLight,
+                  width: 1,
+                ),
+              ),
+              child: Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(8),
+                  onTap: () {
+                    setState(() {
+                      if (isDayExpanded) {
+                        _expandedDeletedGroups.remove(dayKey);
+                      } else {
+                        _expandedDeletedGroups.add(dayKey);
+                      }
+                    });
+                  },
+                  child: Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: Row(
+                      children: [
+                        Icon(
+                          isDayExpanded ? Icons.expand_less : Icons.expand_more,
+                          color: AppColors.textSecondary,
+                          size: 20,
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                _getDayDisplayName(dayKey),
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                  color: AppColors.textPrimary,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                '${dayTransactions.length} transactions • ₹${dayTotal.toStringAsFixed(2)}',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: AppColors.textSecondary,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          );
+          
+          // Individual transactions (only if day is expanded)
+          if (isDayExpanded) {
+            for (final tx in dayTransactions) {
+              widgets.add(_deletedTransactionCard(tx));
+            }
+          }
+        }
+      }
+    }
+    
+    return widgets;
   }
 
   Widget _deletedTransactionCard(Map<String, dynamic> tx) {

@@ -68,6 +68,8 @@ flutter:
 
   assets:
     - assets/icon/sms_scan.png
+    - assets/icon/icon.png
+    - assets/icon/splash_icon.png
 
   # To add assets to your application, add an assets section, like this:
   # assets:
