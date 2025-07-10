@@ -338,98 +338,98 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
     _historyBox = Hive.box('history');
     _cancelledBox = Hive.box('cancelled');
   }
-// ======================================
-  // ADD THIS METHOD TO CREATE TEST DATA
-  void _addTestData() {
-    // Define a specific test date - July 09, 2025 (today)
-    final testDate = DateTime(2025, 7, 09);
+// // ======================================
+//   // ADD THIS METHOD TO CREATE TEST DATA
+//   void _addTestData() {
+//     // Define a specific test date - July 09, 2025 (today)
+//     final testDate = DateTime(2025, 7, 09);
     
-    // Only add test data if not already present
-    final hasTestData = _transactions.any((tx) {
-      final txDate = tx['timestamp'] as DateTime;
-      return txDate.year == testDate.year && 
-            txDate.month == testDate.month && 
-            txDate.day == testDate.day;
-    });
+//     // Only add test data if not already present
+//     final hasTestData = _transactions.any((tx) {
+//       final txDate = tx['timestamp'] as DateTime;
+//       return txDate.year == testDate.year && 
+//             txDate.month == testDate.month && 
+//             txDate.day == testDate.day;
+//     });
     
-    if (!hasTestData) {
-      final testTransactions = [
-        {
-          'id': 1001,
-          'amount': 450.00,
-          'merchant': 'Swiggy - Pizza Hut',
-          'fromAccount': 'HDFC Bank XX1234',
-          'toAccount': 'Swiggy Merchant',
-          'timestamp': testDate.add(const Duration(hours: 12, minutes: 30)),
-          'tag': null, // null because these are untagged transactions
-          'isDebited': true,
-        },
-        {
-          'id': 1002,
-          'amount': 75.50,
-          'merchant': 'Uber Auto',
-          'fromAccount': 'HDFC Bank XX1234',
-          'toAccount': 'Uber Technologies',
-          'timestamp': testDate.add(const Duration(hours: 9, minutes: 15)),
-          'tag': null,
-          'isDebited': true,
-        },
-        {
-          'id': 1003,
-          'amount': 1250.00,
-          'merchant': 'Amazon Shopping',
-          'fromAccount': 'HDFC Bank XX1234',
-          'toAccount': 'Amazon Seller',
-          'timestamp': testDate.add(const Duration(hours: 14, minutes: 45)),
-          'tag': null,
-          'isDebited': true,
-        },
-      ];
+//     if (!hasTestData) {
+//       final testTransactions = [
+//         {
+//           'id': 1001,
+//           'amount': 450.00,
+//           'merchant': 'Swiggy - Pizza Hut',
+//           'fromAccount': 'HDFC Bank XX1234',
+//           'toAccount': 'Swiggy Merchant',
+//           'timestamp': testDate.add(const Duration(hours: 12, minutes: 30)),
+//           'tag': null, // null because these are untagged transactions
+//           'isDebited': true,
+//         },
+//         {
+//           'id': 1002,
+//           'amount': 75.50,
+//           'merchant': 'Uber Auto',
+//           'fromAccount': 'HDFC Bank XX1234',
+//           'toAccount': 'Uber Technologies',
+//           'timestamp': testDate.add(const Duration(hours: 9, minutes: 15)),
+//           'tag': null,
+//           'isDebited': true,
+//         },
+//         {
+//           'id': 1003,
+//           'amount': 1250.00,
+//           'merchant': 'Amazon Shopping',
+//           'fromAccount': 'HDFC Bank XX1234',
+//           'toAccount': 'Amazon Seller',
+//           'timestamp': testDate.add(const Duration(hours: 14, minutes: 45)),
+//           'tag': null,
+//           'isDebited': true,
+//         },
+//       ];
       
-      // Add to current transactions (for home screen)
-      _transactions.addAll(testTransactions);
+//       // Add to current transactions (for home screen)
+//       _transactions.addAll(testTransactions);
       
-      // Also add some historical data for calendar testing
-      final historicalTransactions = [
-        {
-          'id': 1004,
-          'amount': 2500.00,
-          'merchant': 'Salary Credit',
-          'fromAccount': 'ABC Company Ltd',
-          'toAccount': 'HDFC Bank XX1234',
-          'timestamp': testDate.add(const Duration(hours: 10, minutes: 0)),
-          'tag': null,
-          'isDebited': false,
-        },
-        {
-          'id': 1005,
-          'amount': 350.00,
-          'merchant': 'Zomato - McDonalds',
-          'fromAccount': 'HDFC Bank XX1234',
-          'toAccount': 'Zomato Merchant',
-          'timestamp': testDate.add(const Duration(hours: 20, minutes: 30)),
-          'tag': 'Food',
-          'isDebited': true,
-        },
-        {
-          'id': 1006,
-          'amount': 850.00,
-          'merchant': 'BESCOM Electricity',
-          'fromAccount': 'HDFC Bank XX1234',
-          'toAccount': 'BESCOM',
-          'timestamp': testDate.add(const Duration(hours: 16, minutes: 20)),
-          'tag': 'Utility',
-          'isDebited': true,
-        },
-      ];
+//       // Also add some historical data for calendar testing
+//       final historicalTransactions = [
+//         {
+//           'id': 1004,
+//           'amount': 2500.00,
+//           'merchant': 'Salary Credit',
+//           'fromAccount': 'ABC Company Ltd',
+//           'toAccount': 'HDFC Bank XX1234',
+//           'timestamp': testDate.add(const Duration(hours: 10, minutes: 0)),
+//           'tag': null,
+//           'isDebited': false,
+//         },
+//         {
+//           'id': 1005,
+//           'amount': 350.00,
+//           'merchant': 'Zomato - McDonalds',
+//           'fromAccount': 'HDFC Bank XX1234',
+//           'toAccount': 'Zomato Merchant',
+//           'timestamp': testDate.add(const Duration(hours: 20, minutes: 30)),
+//           'tag': 'Food',
+//           'isDebited': true,
+//         },
+//         {
+//           'id': 1006,
+//           'amount': 850.00,
+//           'merchant': 'BESCOM Electricity',
+//           'fromAccount': 'HDFC Bank XX1234',
+//           'toAccount': 'BESCOM',
+//           'timestamp': testDate.add(const Duration(hours: 16, minutes: 20)),
+//           'tag': 'Utility',
+//           'isDebited': true,
+//         },
+//       ];
       
-      // Add to history (for calendar testing)
-      _history.addAll(historicalTransactions);
+//       // Add to history (for calendar testing)
+//       _history.addAll(historicalTransactions);
       
-      print('Added test data for ${testDate.day}/${testDate.month}/${testDate.year}');
-    }
-  }
-// ====================================== 
+//       print('Added test data for ${testDate.day}/${testDate.month}/${testDate.year}');
+//     }
+//   }
+// // ====================================== 
   void _loadData() {
     // Load transactions
     final savedTransactions = _transactionsBox.get('transactions', defaultValue: <Map<String, dynamic>>[]);
@@ -441,9 +441,9 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
       _history = _convertFromStorage(savedHistory);
       _cancelledTransactions = _convertFromStorage(savedCancelled);
 
-// ======================================
-      _addTestData(); //REMOVE
-// ======================================
+// // ======================================
+//       _addTestData(); //REMOVE
+// // ======================================
       // Sort transactions by timestamp (latest first)
       _transactions.sort((a, b) => (b['timestamp'] as DateTime).compareTo(a['timestamp'] as DateTime));
       _history.sort((a, b) => (b['timestamp'] as DateTime).compareTo(a['timestamp'] as DateTime));
@@ -887,12 +887,7 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
             offset: const Offset(0, 4),
           ),
         ],
-        border: Border.all(
-          color: isDebited 
-              ? AppColors.error.withOpacity(0.13)
-              : AppColors.success.withOpacity(0.13),
-          width: 1.1,
-        ),
+
       ),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 18),
@@ -1225,26 +1220,85 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
                 // Transactions section
                 Expanded(
                   child: _transactions.isEmpty
-                      ? Center(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  Icons.receipt_long_outlined,
-                  size: 64,
-                                color: AppColors.textTertiary,
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'No new transactions.',
-                  style: TextStyle(
-                    fontSize: 18,
-                                  color: AppColors.textTertiary,
-                  ),
-                ),
-              ],
-            ),
+                      ? SingleChildScrollView(
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          child: Container(
+                            height: MediaQuery.of(context).size.height * 0.4,
+                            child: Center(
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(20),
+                                    decoration: BoxDecoration(
+                                      color: AppColors.surface,
+                                      borderRadius: BorderRadius.circular(16),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: Colors.black.withOpacity(0.04),
+                                          blurRadius: 8,
+                                          offset: const Offset(0, 2),
+                                        ),
+                                      ],
+                                      border: Border.all(
+                                        color: AppColors.surfaceLight,
+                                        width: 1.0,
+                                      ),
+                                    ),
+                                    child: Column(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(
+                                          Icons.celebration,
+                                          size: 64,
+                                          color: AppColors.success,
+                                        ),
+                                        const SizedBox(height: 16),
+                                        Text(
+                                          'Congratulations!',
+                                          style: TextStyle(
+                                            fontSize: 20,
+                                            fontWeight: FontWeight.w700,
+                                            color: AppColors.textPrimary,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 8),
+                                        Text(
+                                          'You have tracked all your expenses!',
+                                          style: TextStyle(
+                                            fontSize: 16,
+                                            color: AppColors.textSecondary,
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                          textAlign: TextAlign.center,
+                                        ),
+                                        const SizedBox(height: 12),
+                                        Text(
+                                          'Stay financially responsible!',
+                                          style: TextStyle(
+                                            fontSize: 14,
+                                            color: AppColors.success,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                          textAlign: TextAlign.center,
+                                        ),
+                                        const SizedBox(height: 16),
+                                        Text(
+                                          'Pull down to refresh and check for new transactions',
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            color: AppColors.textTertiary,
+                                          ),
+                                          textAlign: TextAlign.center,
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
                         )
                       : ListView(
               padding: const EdgeInsets.only(left: 0, right: 0, top: 0, bottom: 16),
@@ -1377,7 +1431,7 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
                 ),
                 // News Container (always visible)
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 0),
+                  padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 0),
                   child: Container(
                     decoration: BoxDecoration(
                       color: AppColors.surface,
@@ -1663,6 +1717,7 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
                   ],
                 ),
               ),
+              const SizedBox(height: 32),
               // Features
               Column(
                 children: [
@@ -1682,6 +1737,18 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
                     icon: Icons.security,
                     title: 'Privacy First',
                     description: 'All data stays on your device. We never access your personal information',
+                  ),
+                  const SizedBox(height: 16),
+                  _buildFeatureItem(
+                    icon: Icons.history,
+                    title: 'Transaction History',
+                    description: 'View and manage your past transactions with detailed calendar view',
+                  ),
+                  const SizedBox(height: 16),
+                  _buildFeatureItem(
+                    icon: Icons.trending_up,
+                    title: 'Financial Insights',
+                    description: 'Track your spending habits and get personalized financial recommendations',
                   ),
                 ],
               ),
@@ -1731,6 +1798,7 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
     required String description,
   }) {
     return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Container(
           width: 48,
@@ -1863,13 +1931,13 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
-                'Hance',
-                style: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 1.2,
+          'Hance',
+          style: TextStyle(
+            fontSize: 24,
+            fontWeight: FontWeight.w700,
+            letterSpacing: 1.2,
                   color: AppColors.textPrimary,
-                  fontFamily: 'Roboto',
+            fontFamily: 'Roboto',
                 ),
               ),
             ],
@@ -2219,7 +2287,7 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
           // Analysis selection container
           if (_selectedDay == null)
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 0),
               child: Container(
                 width: double.infinity,
                 decoration: BoxDecoration(
@@ -2337,7 +2405,7 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
           // Expenditure Analysis Chart (only show if no day is selected)
           if (_selectedDay == null)
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
               child: Container(
                 width: double.infinity,
                 decoration: BoxDecoration(
@@ -2461,7 +2529,7 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
     final dayTotal = _getTotalForDay(day);
     
     return Container(
-      color: AppColors.surface,
+      color: AppColors.background,
       child: Column(
         children: [
           // Day header
@@ -2827,7 +2895,6 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
   }
 
   Widget _deletedTransactionCard(Map<String, dynamic> tx) {
-    final isExpanded = _expandedDeletedCards.contains(tx['id']);
     final isDebited = tx['isDebited'] == true;
     final tag = tx['tag'] as String?;
     return Container(
@@ -2842,80 +2909,62 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
             offset: const Offset(0, 4),
           ),
         ],
-        border: Border.all(
-          color: AppColors.error.withOpacity(0.13),
-          width: 1.1,
-        ),
       ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          borderRadius: BorderRadius.circular(18),
-          onTap: () {
-            setState(() {
-              if (isExpanded) {
-                _expandedDeletedCards.remove(tx['id']);
-              } else {
-                _expandedDeletedCards.add(tx['id']);
-              }
-            });
-          },
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 18),
-            child: Column(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 18),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Icon(
-                      Icons.delete_outline,
-                      color: AppColors.error,
-                      size: 28,
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            '₹ ${tx['amount'].toStringAsFixed(2)}',
-                            style: TextStyle(
-                              fontSize: 22,
-                              fontWeight: FontWeight.w700,
-                              color: AppColors.error,
-                            ),
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            tx['merchant'] ?? 'Unknown',
-                            style: TextStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w500,
-                              color: AppColors.textSecondary,
-                            ),
-                          ),
-                        ],
+                Icon(
+                  Icons.delete_outline,
+                  color: AppColors.error,
+                  size: 28,
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '₹ ${tx['amount'].toStringAsFixed(2)}',
+                        style: TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.error,
+                        ),
                       ),
-                    ),
-                    // Restore icon and DEBITED/CREDITED tag in a row, centered
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        IconButton(
-                          icon: Icon(Icons.restore, color: AppColors.primary, size: 22),
-                          tooltip: 'Restore',
-                          onPressed: () {
-                            setState(() {
-                              _transactions.insert(0, Map<String, dynamic>.from(tx));
-                              _cancelledTransactions.removeWhere((t) => t['id'] == tx['id']);
-                              _saveTransactions();
-                              _saveCancelledTransactions();
-                            });
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text('Transaction restored!')),
-                            );
-                          },
+                      const SizedBox(height: 2),
+                      Text(
+                        tx['merchant'] ?? 'Unknown',
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w500,
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    IconButton(
+                      icon: Icon(Icons.restore, color: AppColors.primary, size: 22),
+                      tooltip: 'Restore',
+                      onPressed: () {
+                        setState(() {
+                          _transactions.insert(0, Map<String, dynamic>.from(tx));
+                          _cancelledTransactions.removeWhere((t) => t['id'] == tx['id']);
+                          _saveTransactions();
+                          _saveCancelledTransactions();
+                        });
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('Transaction restored!')),
+                        );
+                      },
                     ),
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
@@ -2924,105 +2973,91 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Text(
-                            isDebited ? 'DEBITED' : 'CREDITED',
+                        isDebited ? 'DEBITED' : 'CREDITED',
                         style: TextStyle(
                           fontSize: 11,
                           fontWeight: FontWeight.w600,
                           color: AppColors.error,
                         ),
                       ),
-                        ),
-                      ],
-                    ),
-                    if (tag != null) ...[
-                      const SizedBox(width: 8),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: _getTagColor(tag).withOpacity(0.13),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Text(
-                          tag,
-                          style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w600,
-                            color: _getTagColor(tag),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-                const SizedBox(height: 10),
-                Row(
-                  children: [
-                    Icon(Icons.account_balance_wallet_outlined, size: 16, color: AppColors.textTertiary),
-                    const SizedBox(width: 5),
-                    Flexible(
-                      child: Text(
-                        'From: ${tx['fromAccount'] ?? 'Unknown'}',
-                        style: TextStyle(
-                          fontSize: 12.5,
-                          color: AppColors.textTertiary,
-                        ),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Icon(Icons.arrow_forward_ios_rounded, size: 13, color: AppColors.textTertiary),
-                    const SizedBox(width: 5),
-                    Flexible(
-                      child: Text(
-                        'To: ${tx['toAccount'] ?? 'Unknown'}',
-                        style: TextStyle(
-                          fontSize: 12.5,
-                          color: AppColors.textTertiary,
-                        ),
-                        overflow: TextOverflow.ellipsis,
-                      ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 10),
-                Row(
-                  children: [
-                    Icon(Icons.calendar_today_outlined, size: 15, color: AppColors.textTertiary),
-                    const SizedBox(width: 5),
-                    Text(
-                      _formatDate(tx['timestamp']),
+                if (tag != null) ...[
+                  const SizedBox(width: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: _getTagColor(tag).withOpacity(0.13),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      tag,
                       style: TextStyle(
-                        fontSize: 12,
-                        color: AppColors.textTertiary,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: _getTagColor(tag),
                       ),
                     ),
-                    const SizedBox(width: 14),
-                    Icon(Icons.access_time_outlined, size: 15, color: AppColors.textTertiary),
-                    const SizedBox(width: 5),
-                    Text(
-                      _formatTime(tx['timestamp']),
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: AppColors.textTertiary,
-                      ),
-                    ),
-                  ],
-                ),
-                if (isExpanded) ...[
-                  const SizedBox(height: 16),
-                  // No actions for deleted
+                  ),
                 ],
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: Icon(
-                    isExpanded ? Icons.expand_less : Icons.expand_more,
-                    color: AppColors.textTertiary,
-                    size: 22,
+              ],
+            ),
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                Icon(Icons.account_balance_wallet_outlined, size: 16, color: AppColors.textTertiary),
+                const SizedBox(width: 5),
+                Flexible(
+                  child: Text(
+                    'From: ${tx['fromAccount'] ?? 'Unknown'}',
+                    style: TextStyle(
+                      fontSize: 12.5,
+                      color: AppColors.textTertiary,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Icon(Icons.arrow_forward_ios_rounded, size: 13, color: AppColors.textTertiary),
+                const SizedBox(width: 5),
+                Flexible(
+                  child: Text(
+                    'To: ${tx['toAccount'] ?? 'Unknown'}',
+                    style: TextStyle(
+                      fontSize: 12.5,
+                      color: AppColors.textTertiary,
+                    ),
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
               ],
             ),
-          ),
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                Icon(Icons.calendar_today_outlined, size: 15, color: AppColors.textTertiary),
+                const SizedBox(width: 5),
+                Text(
+                  _formatDate(tx['timestamp']),
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: AppColors.textTertiary,
+                  ),
+                ),
+                const SizedBox(width: 14),
+                Icon(Icons.access_time_outlined, size: 15, color: AppColors.textTertiary),
+                const SizedBox(width: 5),
+                Text(
+                  _formatTime(tx['timestamp']),
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: AppColors.textTertiary,
+                  ),
+                ),
+              ],
+            ),
+          ],
         ),
       ),
     );
